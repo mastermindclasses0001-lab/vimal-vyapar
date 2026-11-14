@@ -1,26 +1,60 @@
-import { useState } from 'react';
-import { Package, Plus, Search, Download, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Package, Plus, Search, Download, AlertCircle, X } from 'lucide-react';
 import { exportToExcel } from '../utils/excelExport';
+import { collection, getDocs, addDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 
 export default function Inventory() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [products, setProducts] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  // Enhanced Inventory Data
-  const inventoryData = [
-    { barcode: '890101', name: 'Premium Rice 25kg', category: 'Grocery', mrp: 1500, purchase_price: 1200, gst_rate: '5%', stock: 2, min_stock: 5 },
-    { barcode: '890102', name: 'Refined Oil 15L', category: 'Grocery', mrp: 2100, purchase_price: 1800, gst_rate: '5%', stock: 1, min_stock: 10 },
-    { barcode: '890103', name: 'Sony Bravia 55"', category: 'Electronics', mrp: 65000, purchase_price: 55000, gst_rate: '28%', stock: 12, min_stock: 3 },
-    { barcode: '890104', name: 'Logitech Mouse', category: 'Electronics', mrp: 850, purchase_price: 500, gst_rate: '18%', stock: 45, min_stock: 10 },
-    { barcode: '890105', name: 'Wheat Flour 10kg', category: 'Grocery', mrp: 450, purchase_price: 350, gst_rate: '5%', stock: 50, min_stock: 15 },
-  ];
+  const [form, setForm] = useState({
+    barcode: '', name: '', category: 'Grocery', purchase_price: '', mrp: '', gst_rate: '5%', stock: '', min_stock: ''
+  });
 
-  const handleExport = () => {
-    exportToExcel(inventoryData, 'Vimal_Vyapar_Complete_Inventory');
+  // Firebase से प्रोडक्ट्स लाना
+  const fetchProducts = async () => {
+    const querySnapshot = await getDocs(collection(db, "products"));
+    const items = [];
+    querySnapshot.forEach((doc) => items.push({ id: doc.id, ...doc.data() }));
+    setProducts(items);
   };
 
-  const filteredData = inventoryData.filter(item => 
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    item.barcode.includes(searchTerm)
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  // Firebase में नया प्रोडक्ट सेव करना
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await addDoc(collection(db, "products"), {
+        ...form,
+        purchase_price: Number(form.purchase_price),
+        mrp: Number(form.mrp),
+        stock: Number(form.stock),
+        min_stock: Number(form.min_stock),
+        timestamp: new Date()
+      });
+      setShowModal(false);
+      setForm({ barcode: '', name: '', category: 'Grocery', purchase_price: '', mrp: '', gst_rate: '5%', stock: '', min_stock: '' });
+      fetchProducts(); // लिस्ट अपडेट करें
+    } catch (error) {
+      alert("Error adding product: " + error.message);
+    }
+    setLoading(false);
+  };
+
+  const handleExport = () => {
+    exportToExcel(products, 'Vimal_Vyapar_Complete_Inventory');
+  };
+
+  const filteredData = products.filter(item => 
+    item.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    item.barcode?.includes(searchTerm)
   );
 
   return (
@@ -33,7 +67,7 @@ export default function Inventory() {
           <button onClick={handleExport} className="btn-outline">
             <Download size={18} /> Export Excel
           </button>
-          <button className="btn-success">
+          <button onClick={() => setShowModal(true)} className="btn-success">
             <Plus size={18} /> Add Product
           </button>
         </div>
@@ -62,14 +96,13 @@ export default function Inventory() {
               <th>GST %</th>
               <th>Live Stock</th>
               <th>Status</th>
-              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {filteredData.map(item => {
               const isLow = item.stock <= item.min_stock;
               return (
-                <tr key={item.barcode}>
+                <tr key={item.id}>
                   <td style={{ color: '#888' }}>{item.barcode}</td>
                   <td style={{ fontWeight: 'bold', color: '#38bdf8' }}>{item.name}</td>
                   <td>{item.category}</td>
@@ -83,21 +116,74 @@ export default function Inventory() {
                   </td>
                   <td>
                     {isLow ? 
-                      <span className="status-badge" style={{ background: '#450a0a', color: '#f87171', display:'flex', alignItems:'center', gap:'4px' }}>
+                      <span className="status-badge" style={{ background: '#450a0a', color: '#f87171', display:'flex', alignItems:'center', gap:'4px', width:'max-content' }}>
                         <AlertCircle size={12} /> Low Stock
                       </span> : 
                       <span className="status-badge" style={{ background: '#064e3b', color: '#34d399' }}>Healthy</span>
                     }
                   </td>
-                  <td>
-                    <button className="btn-primary" style={{ padding: '6px 12px', fontSize: '12px' }}>Edit</button>
-                  </td>
                 </tr>
               )
             })}
+            {products.length === 0 && (
+              <tr><td colSpan="8" style={{textAlign:'center', color:'#888', padding:'30px'}}>No products found. Click "Add Product" to start.</td></tr>
+            )}
           </tbody>
         </table>
       </div>
+
+      {/* Add Product Modal */}
+      {showModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+          <div className="card" style={{ width: '500px', position: 'relative' }}>
+            <button onClick={() => setShowModal(false)} style={{ position: 'absolute', top: '20px', right: '20px', background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer' }}>
+              <X size={24} />
+            </button>
+            <h2 style={{ color: '#eab308', marginTop: 0 }}>Add New Product</h2>
+            <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{ color: '#888', fontSize: '12px' }}>Product Name</label>
+                <input required value={form.name} onChange={e => setForm({...form, name: e.target.value})} style={{ marginBottom: 0 }} />
+              </div>
+              <div>
+                <label style={{ color: '#888', fontSize: '12px' }}>Barcode / HSN</label>
+                <input required value={form.barcode} onChange={e => setForm({...form, barcode: e.target.value})} style={{ marginBottom: 0 }} />
+              </div>
+              <div>
+                <label style={{ color: '#888', fontSize: '12px' }}>Category</label>
+                <select value={form.category} onChange={e => setForm({...form, category: e.target.value})} style={{ marginBottom: 0 }}>
+                  <option>Grocery</option><option>Electronics</option><option>Hardware</option><option>Other</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ color: '#888', fontSize: '12px' }}>Purchase Rate (₹)</label>
+                <input type="number" required value={form.purchase_price} onChange={e => setForm({...form, purchase_price: e.target.value})} style={{ marginBottom: 0 }} />
+              </div>
+              <div>
+                <label style={{ color: '#888', fontSize: '12px' }}>MRP (₹)</label>
+                <input type="number" required value={form.mrp} onChange={e => setForm({...form, mrp: e.target.value})} style={{ marginBottom: 0 }} />
+              </div>
+              <div>
+                <label style={{ color: '#888', fontSize: '12px' }}>GST Rate</label>
+                <select value={form.gst_rate} onChange={e => setForm({...form, gst_rate: e.target.value})} style={{ marginBottom: 0 }}>
+                  <option>0%</option><option>5%</option><option>12%</option><option>18%</option><option>28%</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ color: '#888', fontSize: '12px' }}>Opening Stock</label>
+                <input type="number" required value={form.stock} onChange={e => setForm({...form, stock: e.target.value})} style={{ marginBottom: 0 }} />
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{ color: '#888', fontSize: '12px' }}>Low Stock Warning Limit</label>
+                <input type="number" required value={form.min_stock} onChange={e => setForm({...form, min_stock: e.target.value})} style={{ marginBottom: 0 }} />
+              </div>
+              <button type="submit" className="btn-success" style={{ gridColumn: '1 / -1', justifyContent: 'center' }} disabled={loading}>
+                {loading ? 'Saving...' : 'Save Product'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
