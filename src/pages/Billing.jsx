@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Receipt, Printer, Search, Trash2, X } from 'lucide-react';
-import { collection, getDocs, addDoc, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
 export default function Billing() {
@@ -11,17 +11,15 @@ export default function Billing() {
   const [customer, setCustomer] = useState({ mobile: '', name: '', address: '' });
   const [loading, setLoading] = useState(false);
   const [lastInvoice, setLastInvoice] = useState(null); 
-  const [storeDetails, setStoreDetails] = useState({ storeName: 'VIMAL VYAPAR', address: 'Barganda, Giridih', gstin: '' });
+  const [storeDetails, setStoreDetails] = useState({ storeName: 'YOUR STORE NAME', address: 'Your Address', tagline: '', gstin: '' });
 
   useEffect(() => {
     const fetchData = async () => {
-      // Fetch Products
       const pSnap = await getDocs(collection(db, "products"));
       const items = [];
       pSnap.forEach((d) => items.push({ id: d.id, ...d.data() }));
       setProducts(items);
 
-      // Fetch Store Settings
       const sSnap = await getDoc(doc(db, 'settings', 'storeDetails'));
       if (sSnap.exists()) setStoreDetails(sSnap.data());
     };
@@ -80,9 +78,22 @@ export default function Billing() {
       };
 
       await addDoc(collection(db, "invoices"), invoiceData);
+      
+      for (const item of cart) {
+        const prodRef = doc(db, "products", item.id);
+        const newStock = Math.max(0, item.stock - item.qty);
+        await updateDoc(prodRef, { stock: newStock });
+      }
+
       setLastInvoice(invoiceData);
       setCart([]);
       setCustomer({ mobile: '', name: '', address: '' });
+      
+      const pSnap = await getDocs(collection(db, "products"));
+      const items = [];
+      pSnap.forEach((d) => items.push({ id: d.id, ...d.data() }));
+      setProducts(items);
+
     } catch (error) {
       alert("Error generating invoice: " + error.message);
     }
@@ -91,8 +102,6 @@ export default function Billing() {
 
   return (
     <div style={{ padding: '40px', maxWidth: '1400px', margin: '0 auto', display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
-      
-      {/* Black Print Fix & CSS Injection */}
       <style>
         {`
           @media print {
@@ -105,7 +114,7 @@ export default function Billing() {
         `}
       </style>
 
-      {/* LEFT SIDE: POS */}
+      {/* POS Screen */}
       <div>
         <h1 style={{ color: '#fff', margin: '0 0 24px 0', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <Receipt color="#eab308" size={32} /> Advanced POS Billing
@@ -118,7 +127,7 @@ export default function Billing() {
               <div style={{ position: 'absolute', top: '55px', left: 0, right: 0, background: '#222', zIndex: 10, maxHeight: '250px', overflowY: 'auto' }}>
                 {searchResults.map(item => (
                   <div key={item.id} onClick={() => addToCart(item)} style={{ padding: '12px 16px', borderBottom: '1px solid #333', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', color: '#fff' }}>
-                    <div><strong>{item.name}</strong></div><div style={{ color: '#eab308' }}>₹ {item.mrp}</div>
+                    <div><strong>{item.name}</strong> <small style={{color:'#888'}}>({item.stock} left)</small></div><div style={{ color: '#eab308' }}>₹ {item.mrp}</div>
                   </div>
                 ))}
               </div>
@@ -134,7 +143,7 @@ export default function Billing() {
               <tbody>
                 {cart.map(item => (
                   <tr key={item.id} style={{ borderBottom: '1px solid #222' }}>
-                    <td style={{ padding: '12px', color: '#38bdf8', fontWeight: 'bold' }}>{item.name}</td>
+                    <td style={{ padding: '12px', color: '#38bdf8', fontWeight: 'bold' }}>{item.name}<br/><small style={{color:'#888', fontWeight:'normal'}}>Stk: {item.stock}</small></td>
                     <td style={{ padding: '12px' }}>₹{item.mrp}</td>
                     <td style={{ padding: '12px' }}><input type="number" value={item.qty} onChange={(e) => updateQty(item.id, e.target.value)} style={{ width: '60px', margin: 0, padding: '8px' }} /></td>
                     <td style={{ padding: '12px' }}><input type="number" value={item.discount || ''} onChange={(e) => updateDiscount(item.id, e.target.value)} style={{ width: '80px', margin: 0, padding: '8px' }} /></td>
@@ -148,7 +157,7 @@ export default function Billing() {
         </div>
       </div>
 
-      {/* RIGHT SIDE: Details */}
+      {/* Invoice Details */}
       <div className="card" style={{ height: 'fit-content' }}>
         <h2 style={{ marginTop: 0, color: '#eab308', borderBottom: '1px solid #333', paddingBottom: '16px' }}>Invoice Details</h2>
         <div style={{ margin: '20px 0' }}>
@@ -156,11 +165,11 @@ export default function Billing() {
           <input type="text" placeholder="Customer Name" value={customer.name} onChange={e => setCustomer({...customer, name: e.target.value})} />
         </div>
         <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-          <label style={{ color: '#fff' }}><input type="radio" checked={gstType === 'intra'} onChange={() => setGstType('intra')} /> Local</label>
-          <label style={{ color: '#fff' }}><input type="radio" checked={gstType === 'inter'} onChange={() => setGstType('inter')} /> Interstate</label>
+          <label style={{ color: '#fff' }}><input type="radio" checked={gstType === 'intra'} onChange={() => setGstType('intra')} /> Local (CGST+SGST)</label>
+          <label style={{ color: '#fff' }}><input type="radio" checked={gstType === 'inter'} onChange={() => setGstType('inter')} /> Interstate (IGST)</label>
         </div>
         <div style={{ background: '#000', padding: '16px', borderRadius: '8px', marginBottom: '20px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', color: '#888' }}><span>Taxable</span><span>₹ {totalTaxable.toFixed(2)}</span></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', color: '#888' }}><span>Taxable Amount</span><span>₹ {totalTaxable.toFixed(2)}</span></div>
           {gstType === 'intra' ? (
             <><div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', color: '#888' }}><span>CGST/SGST</span><span>₹ {(totalTaxAmount).toFixed(2)}</span></div></>
           ) : (
@@ -185,10 +194,9 @@ export default function Billing() {
               <button onClick={() => setLastInvoice(null)} className="btn-danger"><X size={16} /> Close</button>
             </div>
 
-            {/* Dynamic Store Header */}
             <div style={{ borderBottom: '2px solid #000', paddingBottom: '20px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between' }}>
               <div>
-                <h1 style={{ margin: '0 0 5px 0', fontSize: '32px' }}>{storeDetails.storeName}</h1>
+                <h1 style={{ margin: '0 0 5px 0', fontSize: '32px', textTransform: 'uppercase' }}>{storeDetails.storeName}</h1>
                 {storeDetails.tagline && <p style={{ margin: 0 }}>{storeDetails.tagline}</p>}
                 <p style={{ margin: 0 }}>{storeDetails.address}</p>
                 {storeDetails.gstin && <p style={{ margin: 0, fontWeight: 'bold' }}>GSTIN: {storeDetails.gstin}</p>}
@@ -200,7 +208,6 @@ export default function Billing() {
               </div>
             </div>
 
-            {/* Print Content Same As Before... */}
             <div style={{ marginBottom: '20px' }}>
               <strong>Billed To:</strong><br/>
               {lastInvoice.customer.name || 'Cash Customer'}<br/>
@@ -211,9 +218,10 @@ export default function Billing() {
               <thead>
                 <tr style={{ background: '#f0f0f0' }}>
                   <th style={{ border: '1px solid #000', padding: '10px' }}>Item Description</th>
-                  <th style={{ border: '1px solid #000', padding: '10px' }}>Rate</th>
-                  <th style={{ border: '1px solid #000', padding: '10px' }}>Qty</th>
-                  <th style={{ border: '1px solid #000', padding: '10px' }}>Amount</th>
+                  <th style={{ border: '1px solid #000', padding: '10px', textAlign: 'right' }}>Rate</th>
+                  <th style={{ border: '1px solid #000', padding: '10px', textAlign: 'center' }}>Qty</th>
+                  <th style={{ border: '1px solid #000', padding: '10px', textAlign: 'right' }}>Disc.</th>
+                  <th style={{ border: '1px solid #000', padding: '10px', textAlign: 'right' }}>Amount</th>
                 </tr>
               </thead>
               <tbody>
@@ -222,7 +230,8 @@ export default function Billing() {
                     <td style={{ border: '1px solid #000', padding: '10px' }}>{item.name}</td>
                     <td style={{ border: '1px solid #000', padding: '10px', textAlign: 'right' }}>₹ {item.mrp}</td>
                     <td style={{ border: '1px solid #000', padding: '10px', textAlign: 'center' }}>{item.qty}</td>
-                    <td style={{ border: '1px solid #000', padding: '10px', textAlign: 'right' }}>₹ {Math.max(0, (item.mrp * item.qty) - (item.discount || 0))}</td>
+                    <td style={{ border: '1px solid #000', padding: '10px', textAlign: 'right' }}>₹ {item.discount || 0}</td>
+                    <td style={{ border: '1px solid #000', padding: '10px', textAlign: 'right', fontWeight: 'bold' }}>₹ {Math.max(0, (item.mrp * item.qty) - (item.discount || 0))}</td>
                   </tr>
                 ))}
               </tbody>

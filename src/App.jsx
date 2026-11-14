@@ -8,6 +8,7 @@ import Inventory from './pages/Inventory';
 import Billing from './pages/Billing';
 import Customers from './pages/Customers';
 import Reports from './pages/Reports';
+import Settings from './pages/Settings';
 import { AuthProvider } from './context/AuthContext';
 
 export default function App() {
@@ -19,14 +20,14 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         
-        {/* Protected Routes */}
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
         
-        {/* Admin & Inventory Manager Only */}
         <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
         <Route path="/customers" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
+        
         <Route path="/reports" element={<ProtectedRoute roleRequired="admin"><Reports /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute roleRequired="admin"><Settings /></ProtectedRoute>} />
       </Routes>
     </AuthProvider>
   );

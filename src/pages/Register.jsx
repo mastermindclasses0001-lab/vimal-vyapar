@@ -37,13 +37,9 @@ export default function Register() {
 
   return (
     <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', padding: '20px' }}>
-      <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-        <h1 style={{ color: '#eab308', margin: 0, fontSize: '36px' }}>VIMAL VYAPAR</h1>
-        <h3 style={{ color: '#38bdf8', margin: 0, letterSpacing: '2px', fontSize: '14px' }}>ULTRA LEVEL POS</h3>
-      </div>
       <div className="card" style={{ width: '400px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '20px' }}>
-          <UserPlus color="#22c55e" />
+          <UserPlus color="#22c55e" size={32} />
           <h2 style={{ margin: 0, color: '#fff' }}>Create Account</h2>
         </div>
         
@@ -62,7 +58,7 @@ export default function Register() {
             <option value="admin">System Admin</option>
           </select>
 
-          <button className="btn-success" type="submit" style={{ width: '100%', fontSize: '16px', padding: '14px', marginTop: '10px', justifyContent: 'center' }}>Create User</button>
+          <button className="btn-success" type="submit" style={{ width: '100%', fontSize: '16px', padding: '14px', marginTop: '10px', justifyContent: 'center' }}>Register User</button>
         </form>
         <p style={{ textAlign: 'center', marginTop: '20px', color: '#888' }}>
           Already registered? <Link to="/login" style={{ color: '#eab308' }}>Login Here</Link>

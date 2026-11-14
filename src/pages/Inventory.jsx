@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Package, Plus, Search, Download, AlertCircle, X } from 'lucide-react';
+import { Package, Plus, Search, Download, AlertCircle, X, Trash2 } from 'lucide-react';
 import { exportToExcel } from '../utils/excelExport';
-import { collection, getDocs, addDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
 export default function Inventory() {
@@ -9,12 +9,8 @@ export default function Inventory() {
   const [products, setProducts] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({ barcode: '', name: '', category: 'Grocery', purchase_price: '', mrp: '', gst_rate: '0%', stock: '', min_stock: '' });
 
-  const [form, setForm] = useState({
-    barcode: '', name: '', category: 'Grocery', purchase_price: '', mrp: '', gst_rate: '5%', stock: '', min_stock: ''
-  });
-
-  // Firebase से प्रोडक्ट्स लाना
   const fetchProducts = async () => {
     const querySnapshot = await getDocs(collection(db, "products"));
     const items = [];
@@ -26,7 +22,6 @@ export default function Inventory() {
     fetchProducts();
   }, []);
 
-  // Firebase में नया प्रोडक्ट सेव करना
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -40,63 +35,44 @@ export default function Inventory() {
         timestamp: new Date()
       });
       setShowModal(false);
-      setForm({ barcode: '', name: '', category: 'Grocery', purchase_price: '', mrp: '', gst_rate: '5%', stock: '', min_stock: '' });
-      fetchProducts(); // लिस्ट अपडेट करें
+      setForm({ barcode: '', name: '', category: 'Grocery', purchase_price: '', mrp: '', gst_rate: '0%', stock: '', min_stock: '' });
+      fetchProducts(); 
     } catch (error) {
-      alert("Error adding product: " + error.message);
+      alert("Error: " + error.message);
     }
     setLoading(false);
   };
 
-  const handleExport = () => {
-    exportToExcel(products, 'Vimal_Vyapar_Complete_Inventory');
+  const handleDelete = async (id) => {
+    if(window.confirm("Are you sure?")) {
+      await deleteDoc(doc(db, "products", id));
+      fetchProducts();
+    }
   };
 
-  const filteredData = products.filter(item => 
-    item.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    item.barcode?.includes(searchTerm)
-  );
+  const handleExport = () => exportToExcel(products, 'Inventory');
+
+  const filteredData = products.filter(item => item.name?.toLowerCase().includes(searchTerm.toLowerCase()) || item.barcode?.includes(searchTerm));
 
   return (
     <div style={{ padding: '40px', maxWidth: '1400px', margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-        <h1 style={{ color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Package color="#22c55e" size={32} /> Advanced Inventory
-        </h1>
+        <h1 style={{ color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '12px' }}><Package color="#22c55e" size={32} /> Real-Time Inventory</h1>
         <div style={{ display: 'flex', gap: '10px' }}>
-          <button onClick={handleExport} className="btn-outline">
-            <Download size={18} /> Export Excel
-          </button>
-          <button onClick={() => setShowModal(true)} className="btn-success">
-            <Plus size={18} /> Add Product
-          </button>
+          <button onClick={handleExport} className="btn-outline"><Download size={18} /> Export Excel</button>
+          <button onClick={() => setShowModal(true)} className="btn-success"><Plus size={18} /> Add Product</button>
         </div>
       </div>
 
       <div className="card" style={{ padding: '16px', display: 'flex', gap: '16px', alignItems: 'center' }}>
         <Search color="#888" />
-        <input 
-          type="text" 
-          placeholder="Search products by Name or Barcode..." 
-          style={{ margin: 0, border: 'none', background: 'transparent' }}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+        <input type="text" placeholder="Search products..." style={{ margin: 0, border: 'none', background: 'transparent' }} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
       </div>
 
       <div className="table-container">
         <table>
           <thead>
-            <tr>
-              <th>Barcode</th>
-              <th>Product Name</th>
-              <th>Category</th>
-              <th>Purchase Rate</th>
-              <th>MRP</th>
-              <th>GST %</th>
-              <th>Live Stock</th>
-              <th>Status</th>
-            </tr>
+            <tr><th>Barcode</th><th>Product Name</th><th>Category</th><th>Purchase Rate</th><th>MRP</th><th>GST %</th><th>Live Stock</th><th>Status</th><th>Action</th></tr>
           </thead>
           <tbody>
             {filteredData.map(item => {
@@ -109,77 +85,32 @@ export default function Inventory() {
                   <td>₹ {item.purchase_price}</td>
                   <td style={{ color: '#eab308' }}>₹ {item.mrp}</td>
                   <td>{item.gst_rate}</td>
-                  <td>
-                    <span style={{ fontSize: '18px', fontWeight: 'bold', color: isLow ? '#ef4444' : '#fff' }}>
-                      {item.stock}
-                    </span>
-                  </td>
-                  <td>
-                    {isLow ? 
-                      <span className="status-badge" style={{ background: '#450a0a', color: '#f87171', display:'flex', alignItems:'center', gap:'4px', width:'max-content' }}>
-                        <AlertCircle size={12} /> Low Stock
-                      </span> : 
-                      <span className="status-badge" style={{ background: '#064e3b', color: '#34d399' }}>Healthy</span>
-                    }
-                  </td>
+                  <td><span style={{ fontSize: '18px', fontWeight: 'bold', color: isLow ? '#ef4444' : '#fff' }}>{item.stock}</span></td>
+                  <td>{isLow ? <span className="status-badge" style={{ background: '#450a0a', color: '#f87171' }}><AlertCircle size={12} style={{display:'inline', verticalAlign:'middle'}}/> Low</span> : <span className="status-badge" style={{ background: '#064e3b', color: '#34d399' }}>Healthy</span>}</td>
+                  <td><button onClick={() => handleDelete(item.id)} className="btn-danger" style={{ padding: '6px 12px' }}><Trash2 size={14}/></button></td>
                 </tr>
               )
             })}
-            {products.length === 0 && (
-              <tr><td colSpan="8" style={{textAlign:'center', color:'#888', padding:'30px'}}>No products found. Click "Add Product" to start.</td></tr>
-            )}
+            {products.length === 0 && <tr><td colSpan="9" style={{textAlign:'center', color:'#888', padding:'30px'}}>No products in database.</td></tr>}
           </tbody>
         </table>
       </div>
 
-      {/* Add Product Modal */}
       {showModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
           <div className="card" style={{ width: '500px', position: 'relative' }}>
-            <button onClick={() => setShowModal(false)} style={{ position: 'absolute', top: '20px', right: '20px', background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer' }}>
-              <X size={24} />
-            </button>
+            <button onClick={() => setShowModal(false)} style={{ position: 'absolute', top: '20px', right: '20px', background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer' }}><X size={24} /></button>
             <h2 style={{ color: '#eab308', marginTop: 0 }}>Add New Product</h2>
             <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ color: '#888', fontSize: '12px' }}>Product Name</label>
-                <input required value={form.name} onChange={e => setForm({...form, name: e.target.value})} style={{ marginBottom: 0 }} />
-              </div>
-              <div>
-                <label style={{ color: '#888', fontSize: '12px' }}>Barcode / HSN</label>
-                <input required value={form.barcode} onChange={e => setForm({...form, barcode: e.target.value})} style={{ marginBottom: 0 }} />
-              </div>
-              <div>
-                <label style={{ color: '#888', fontSize: '12px' }}>Category</label>
-                <select value={form.category} onChange={e => setForm({...form, category: e.target.value})} style={{ marginBottom: 0 }}>
-                  <option>Grocery</option><option>Electronics</option><option>Hardware</option><option>Other</option>
-                </select>
-              </div>
-              <div>
-                <label style={{ color: '#888', fontSize: '12px' }}>Purchase Rate (₹)</label>
-                <input type="number" required value={form.purchase_price} onChange={e => setForm({...form, purchase_price: e.target.value})} style={{ marginBottom: 0 }} />
-              </div>
-              <div>
-                <label style={{ color: '#888', fontSize: '12px' }}>MRP (₹)</label>
-                <input type="number" required value={form.mrp} onChange={e => setForm({...form, mrp: e.target.value})} style={{ marginBottom: 0 }} />
-              </div>
-              <div>
-                <label style={{ color: '#888', fontSize: '12px' }}>GST Rate</label>
-                <select value={form.gst_rate} onChange={e => setForm({...form, gst_rate: e.target.value})} style={{ marginBottom: 0 }}>
-                  <option>0%</option><option>5%</option><option>12%</option><option>18%</option><option>28%</option>
-                </select>
-              </div>
-              <div>
-                <label style={{ color: '#888', fontSize: '12px' }}>Opening Stock</label>
-                <input type="number" required value={form.stock} onChange={e => setForm({...form, stock: e.target.value})} style={{ marginBottom: 0 }} />
-              </div>
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ color: '#888', fontSize: '12px' }}>Low Stock Warning Limit</label>
-                <input type="number" required value={form.min_stock} onChange={e => setForm({...form, min_stock: e.target.value})} style={{ marginBottom: 0 }} />
-              </div>
-              <button type="submit" className="btn-success" style={{ gridColumn: '1 / -1', justifyContent: 'center' }} disabled={loading}>
-                {loading ? 'Saving...' : 'Save Product'}
-              </button>
+              <div style={{ gridColumn: '1 / -1' }}><label style={{ color: '#888', fontSize: '12px' }}>Product Name</label><input required value={form.name} onChange={e => setForm({...form, name: e.target.value})} style={{ marginBottom: 0 }} /></div>
+              <div><label style={{ color: '#888', fontSize: '12px' }}>Barcode / HSN</label><input required value={form.barcode} onChange={e => setForm({...form, barcode: e.target.value})} style={{ marginBottom: 0 }} /></div>
+              <div><label style={{ color: '#888', fontSize: '12px' }}>Category</label><select value={form.category} onChange={e => setForm({...form, category: e.target.value})} style={{ marginBottom: 0 }}><option>Grocery</option><option>Electronics</option><option>Hardware</option><option>Other</option></select></div>
+              <div><label style={{ color: '#888', fontSize: '12px' }}>Purchase Rate (₹)</label><input type="number" required value={form.purchase_price} onChange={e => setForm({...form, purchase_price: e.target.value})} style={{ marginBottom: 0 }} /></div>
+              <div><label style={{ color: '#888', fontSize: '12px' }}>MRP (₹)</label><input type="number" required value={form.mrp} onChange={e => setForm({...form, mrp: e.target.value})} style={{ marginBottom: 0 }} /></div>
+              <div><label style={{ color: '#888', fontSize: '12px' }}>GST Rate</label><select value={form.gst_rate} onChange={e => setForm({...form, gst_rate: e.target.value})} style={{ marginBottom: 0 }}><option>0%</option><option>5%</option><option>12%</option><option>18%</option><option>28%</option></select></div>
+              <div><label style={{ color: '#888', fontSize: '12px' }}>Opening Stock</label><input type="number" required value={form.stock} onChange={e => setForm({...form, stock: e.target.value})} style={{ marginBottom: 0 }} /></div>
+              <div style={{ gridColumn: '1 / -1' }}><label style={{ color: '#888', fontSize: '12px' }}>Low Stock Limit</label><input type="number" required value={form.min_stock} onChange={e => setForm({...form, min_stock: e.target.value})} style={{ marginBottom: 0 }} /></div>
+              <button type="submit" className="btn-success" style={{ gridColumn: '1 / -1', justifyContent: 'center' }} disabled={loading}>{loading ? 'Saving...' : 'Save Product'}</button>
             </form>
           </div>
         </div>

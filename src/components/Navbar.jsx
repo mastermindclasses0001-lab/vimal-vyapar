@@ -1,11 +1,27 @@
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, ShoppingCart, Package, Receipt, Users, LogOut, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Package, Receipt, Users, LogOut, BarChart3, Settings } from 'lucide-react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 
 export default function Navbar() {
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [storeName, setStoreName] = useState('SMART POS');
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      if(currentUser) {
+        const snap = await getDoc(doc(db, 'settings', 'storeDetails'));
+        if(snap.exists() && snap.data().storeName) {
+          setStoreName(snap.data().storeName);
+        }
+      }
+    };
+    fetchSettings();
+  }, [currentUser]);
 
   const handleLogout = async () => {
     await logout();
@@ -25,7 +41,7 @@ export default function Navbar() {
   return (
     <nav style={{ background: '#111', padding: '0 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #eab308', position: 'sticky', top: 0, zIndex: 100 }}>
       <div style={{ padding: '16px 0' }}>
-        <h2 style={{ margin: 0, color: '#eab308', letterSpacing: '2px', fontSize: '24px' }}>VIMAL VYAPAR</h2>
+        <h2 style={{ margin: 0, color: '#eab308', letterSpacing: '2px', fontSize: '24px', textTransform: 'uppercase' }}>{storeName}</h2>
         <small style={{ color: '#38bdf8', fontSize: '10px', letterSpacing: '2px' }}>PRO EDITION</small>
       </div>
       
@@ -52,6 +68,11 @@ export default function Navbar() {
             </Link>
           )
         })}
+        {currentUser.role === 'admin' && (
+          <Link to="/settings" style={{ color: location.pathname === '/settings' ? '#eab308' : '#fff', display: 'flex', alignItems: 'center', gap: '8px', padding: '24px 16px', borderBottom: location.pathname === '/settings' ? '3px solid #eab308' : '3px solid transparent', textDecoration: 'none', transition: '0.2s' }}>
+            <Settings size={18} /> Settings
+          </Link>
+        )}
       </div>
 
       <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>

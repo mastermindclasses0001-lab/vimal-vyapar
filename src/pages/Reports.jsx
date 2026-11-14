@@ -1,83 +1,89 @@
-import { useState } from 'react';
-import { BarChart3, Download, Calendar } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { BarChart3, Download } from 'lucide-react';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { db } from '../firebase';
 import { exportToExcel } from '../utils/excelExport';
 
 export default function Reports() {
-  const [reportType, setReportType] = useState('daily');
+  const [reportData, setReportData] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Dummy Report Data
-  const reportData = [
-    { date: '2026-11-14', total_sales: 17750, cgs: 14000, gross_profit: 3750, cgst: 800, sgst: 800, net_profit: 2150 },
-    { date: '2026-11-13', total_sales: 22000, cgs: 18000, gross_profit: 4000, cgst: 1000, sgst: 1000, net_profit: 2000 },
-    { date: '2026-11-12', total_sales: 15000, cgs: 11000, gross_profit: 4000, cgst: 700, sgst: 700, net_profit: 2600 },
-  ];
+  useEffect(() => {
+    const fetchReports = async () => {
+      const iSnap = await getDocs(query(collection(db, "invoices"), orderBy("timestamp", "desc")));
+      const rMap = {};
+
+      iSnap.forEach(doc => {
+        const data = doc.data();
+        const dateStr = data.date; 
+
+        if(!rMap[dateStr]) {
+          rMap[dateStr] = {
+            date: dateStr,
+            total_sales: 0,
+            cgs: 0,
+            gross_margin: 0,
+            total_discount: 0,
+            tax_collected: 0,
+            net_profit: 0
+          };
+        }
+
+        rMap[dateStr].total_sales += Number(data.grandTotal || 0);
+        rMap[dateStr].total_discount += Number(data.totalDiscount || 0);
+        rMap[dateStr].tax_collected += Number(data.totalTaxAmount || 0);
+        
+        let cogs = 0;
+        data.items?.forEach(item => {
+          cogs += (Number(item.purchase_price || 0) * Number(item.qty || 1));
+        });
+        rMap[dateStr].cgs += cogs;
+
+        const profit = Number(data.totalTaxable || 0) - cogs;
+        rMap[dateStr].net_profit += profit;
+        rMap[dateStr].gross_margin += profit; 
+      });
+
+      setReportData(Object.values(rMap));
+      setLoading(false);
+    };
+    fetchReports();
+  }, []);
 
   const handleExport = () => {
-    exportToExcel(reportData, `Vimal_Vyapar_P&L_Report_${reportType}`);
+    exportToExcel(reportData, `Profit_Loss_Report`);
   };
 
   return (
     <div style={{ padding: '40px', maxWidth: '1400px', margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
         <h1 style={{ color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <BarChart3 color="#38bdf8" size={32} /> Profit & Loss Reports
+          <BarChart3 color="#38bdf8" size={32} /> P&L Reports
         </h1>
-        <button onClick={handleExport} className="btn-success">
-          <Download size={18} /> Download Excel Report
-        </button>
-      </div>
-
-      <div className="card" style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Calendar color="#888" />
-          <span style={{ color: '#888' }}>Select Report Range:</span>
-        </div>
-        <select 
-          style={{ width: '200px', margin: 0 }} 
-          value={reportType} 
-          onChange={(e) => setReportType(e.target.value)}
-        >
-          <option value="daily">Daily Report</option>
-          <option value="monthly">Monthly Report</option>
-          <option value="custom">Custom Date Range</option>
-        </select>
-        
-        {reportType === 'custom' && (
-           <div style={{ display: 'flex', gap: '10px' }}>
-             <input type="date" style={{ margin: 0, width:'150px' }} />
-             <span style={{color:'#888', alignSelf:'center'}}>to</span>
-             <input type="date" style={{ margin: 0, width:'150px' }} />
-           </div>
-        )}
+        <button onClick={handleExport} className="btn-success"><Download size={18} /> Download Excel</button>
       </div>
 
       <div className="table-container">
-        <table>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Total Sales (Gross)</th>
-              <th>Cost of Goods (COGS)</th>
-              <th>Gross Margin</th>
-              <th>CGST Collected</th>
-              <th>SGST Collected</th>
-              <th style={{ color: '#22c55e' }}>Net Profit</th>
-            </tr>
-          </thead>
-          <tbody>
-            {reportData.map((row, i) => (
-              <tr key={i}>
-                <td style={{ color: '#888' }}>{row.date}</td>
-                <td style={{ fontWeight: 'bold' }}>₹ {row.total_sales.toLocaleString()}</td>
-                <td style={{ color: '#ef4444' }}>₹ {row.cgs.toLocaleString()}</td>
-                <td style={{ color: '#38bdf8' }}>₹ {row.gross_profit.toLocaleString()}</td>
-                <td>₹ {row.cgst.toLocaleString()}</td>
-                <td>₹ {row.sgst.toLocaleString()}</td>
-                <td style={{ color: '#22c55e', fontSize: '18px', fontWeight: 'bold' }}>₹ {row.net_profit.toLocaleString()}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        {loading ? <div style={{padding:'20px', color:'#eab308'}}>Calculating P&L...</div> : (
+          <table>
+            <thead>
+              <tr><th>Date</th><th>Gross Sales</th><th>COGS</th><th>Discount</th><th>Tax</th><th style={{ color: '#22c55e' }}>Net Profit</th></tr>
+            </thead>
+            <tbody>
+              {reportData.map((row, i) => (
+                <tr key={i}>
+                  <td style={{ color: '#888' }}>{row.date}</td>
+                  <td style={{ fontWeight: 'bold' }}>₹ {row.total_sales.toLocaleString('en-IN', {maximumFractionDigits:0})}</td>
+                  <td style={{ color: '#ef4444' }}>₹ {row.cgs.toLocaleString('en-IN', {maximumFractionDigits:0})}</td>
+                  <td style={{ color: '#38bdf8' }}>₹ {row.total_discount.toLocaleString('en-IN', {maximumFractionDigits:0})}</td>
+                  <td style={{ color: '#eab308' }}>₹ {row.tax_collected.toLocaleString('en-IN', {maximumFractionDigits:0})}</td>
+                  <td style={{ color: '#22c55e', fontSize: '18px', fontWeight: 'bold' }}>₹ {row.net_profit.toLocaleString('en-IN', {maximumFractionDigits:0})}</td>
+                </tr>
+              ))}
+              {reportData.length === 0 && <tr><td colSpan="6" style={{textAlign: 'center', color: '#888'}}>No sales data available.</td></tr>}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );

@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../firebase';
 import { Store } from 'lucide-react';
 
 export default function Login() {
@@ -10,6 +11,15 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [storeName, setStoreName] = useState('SMART POS');
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      const snap = await getDoc(doc(db, 'settings', 'storeDetails'));
+      if(snap.exists() && snap.data().storeName) setStoreName(snap.data().storeName);
+    };
+    fetchSettings();
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -27,11 +37,10 @@ export default function Login() {
     <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
       <div style={{ textAlign: 'center', marginBottom: '30px' }}>
         <Store size={64} color="#eab308" style={{ marginBottom: '10px' }} />
-        <h1 style={{ color: '#eab308', margin: 0, fontSize: '48px', letterSpacing: '2px' }}>VIMAL VYAPAR</h1>
-        <h3 style={{ color: '#38bdf8', margin: 0, letterSpacing: '4px' }}>ULTRA LEVEL POS</h3>
+        <h1 style={{ color: '#eab308', margin: 0, fontSize: '48px', letterSpacing: '2px', textTransform: 'uppercase' }}>{storeName}</h1>
+        <h3 style={{ color: '#38bdf8', margin: 0, letterSpacing: '4px' }}>SECURE LOGIN</h3>
       </div>
       <div className="card" style={{ width: '400px', padding: '40px' }}>
-        <h2 style={{ textAlign: 'center', color: '#fff', marginTop: 0, marginBottom: '30px' }}>Secure Login</h2>
         {error && <p style={{ color: '#ef4444', textAlign: 'center', background: '#450a0a', padding: '10px', borderRadius: '6px' }}>{error}</p>}
         <form onSubmit={handleLogin}>
           <input type="email" placeholder="Email Address" required value={email} onChange={e => setEmail(e.target.value)} />
