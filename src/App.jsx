@@ -22,10 +22,10 @@ export default function App() {
         
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
-        
         <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
-        <Route path="/customers" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
         
+        {/* Admin Strictly Protected Routes */}
+        <Route path="/customers" element={<ProtectedRoute roleRequired="admin"><Customers /></ProtectedRoute>} />
         <Route path="/reports" element={<ProtectedRoute roleRequired="admin"><Reports /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute roleRequired="admin"><Settings /></ProtectedRoute>} />
       </Routes>

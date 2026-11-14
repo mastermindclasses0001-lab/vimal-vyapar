@@ -30,12 +30,12 @@ export default function Navbar() {
 
   if (!currentUser) return null;
 
+  // Strict Roles: Seller can only see Dashboard, Billing, Inventory(View Only)
   const links = [
-    { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={18} />, roles: ['admin', 'seller', 'inventory'] },
+    { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={18} />, roles: ['admin', 'seller'] },
     { name: 'Billing POS', path: '/billing', icon: <Receipt size={18} />, roles: ['admin', 'seller'] },
-    { name: 'Inventory', path: '/inventory', icon: <Package size={18} />, roles: ['admin', 'inventory'] },
-    { name: 'Customers', path: '/customers', icon: <Users size={18} />, roles: ['admin'] },
-    { name: 'Reports', path: '/reports', icon: <BarChart3 size={18} />, roles: ['admin'] },
+    { name: 'Inventory', path: '/inventory', icon: <Package size={18} />, roles: ['admin', 'seller'] },
+    { name: 'Master Reports', path: '/reports', icon: <BarChart3 size={18} />, roles: ['admin'] },
   ];
 
   return (

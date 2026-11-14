@@ -38,15 +38,13 @@ export default function Settings() {
     setLoading(false);
   };
 
-  if (currentUser?.role !== 'admin') {
-    return <div style={{ padding: '40px', color: '#fff', textAlign: 'center' }}>Access Denied. Admins only.</div>;
-  }
+  if (currentUser?.role !== 'admin') return null;
 
   return (
     <div className="no-print" style={{ padding: '40px', maxWidth: '800px', margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '30px' }}>
         <SettingsIcon color="#eab308" size={32} />
-        <h1 style={{ color: '#fff', margin: 0 }}>System Settings</h1>
+        <h1 style={{ color: '#fff', margin: 0 }}>System Settings (Admin Only)</h1>
       </div>
       
       <div className="card">
@@ -71,7 +69,7 @@ export default function Settings() {
             <Cloud size={20} /> Google Drive Cloud Backup Integration
           </h3>
           <p style={{color:'#888', fontSize:'13px', marginBottom:'15px'}}>
-            Paste your Google Drive Folder Link below. Since this software runs entirely in the browser without a paid background server, automatic 10 PM tasks aren't possible. However, setting this link enables a <strong>"1-Click Auto Backup"</strong> on the Dashboard. When you close the shop, just click it to download today's Excel report and instantly open your Google Drive folder to drop it in.
+            Paste your Google Drive Folder Link below for the 1-Click Auto Backup on the Dashboard.
           </p>
           <label style={{color:'#22c55e', fontSize:'12px', textTransform:'uppercase', fontWeight: 'bold'}}>Google Drive Folder Link</label>
           <input type="url" placeholder="https://drive.google.com/drive/folders/..." value={storeData.driveLink || ''} onChange={e => setStoreData({...storeData, driveLink: e.target.value})} style={{ border: '1px solid #22c55e' }} />

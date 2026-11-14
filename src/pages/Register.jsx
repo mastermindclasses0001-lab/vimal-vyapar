@@ -26,7 +26,7 @@ export default function Register() {
         uid: user.uid,
         name: form.name,
         email: form.email,
-        role: form.role,
+        role: 'seller', // Strictly force seller registration from public page
         createdAt: new Date()
       });
       navigate('/dashboard');
@@ -36,12 +36,14 @@ export default function Register() {
     setLoading(false);
   };
 
+  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
+
   return (
     <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', padding: '20px' }}>
       <div className="card" style={{ width: '400px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '20px' }}>
           <UserPlus color="#22c55e" size={32} />
-          <h2 style={{ margin: 0, color: '#fff' }}>Create Account</h2>
+          <h2 style={{ margin: 0, color: '#fff' }}>Salesman Registration</h2>
         </div>
         {error && <p style={{ color: '#ef4444', textAlign: 'center', background: '#450a0a', padding: '10px', borderRadius: '6px' }}>{error}</p>}
         <form onSubmit={handleSubmit}>
@@ -49,14 +51,9 @@ export default function Register() {
           <input type="email" placeholder="Email Address" required value={form.email} onChange={e => setForm({...form, email: e.target.value})} />
           <input type="password" placeholder="Password (Min 6 chars)" required value={form.password} onChange={e => setForm({...form, password: e.target.value})} />
           <input type="password" placeholder="Confirm Password" required value={form.confirm} onChange={e => setForm({...form, confirm: e.target.value})} />
-          <label style={{color:'#888', marginBottom:'5px', display:'block'}}>Assign Role:</label>
-          <select value={form.role} onChange={e => setForm({...form, role: e.target.value})}>
-            <option value="seller">Seller / Cashier</option>
-            <option value="inventory">Inventory Manager</option>
-            <option value="admin">System Admin</option>
-          </select>
+          
           <button className="btn-success" type="submit" style={{ width: '100%', fontSize: '16px', padding: '14px', marginTop: '10px', justifyContent: 'center' }} disabled={loading}>
-            {loading ? 'Creating...' : 'Register User'}
+            {loading ? 'Creating...' : 'Register as Salesman'}
           </button>
         </form>
         <p style={{ textAlign: 'center', marginTop: '20px', color: '#888' }}>

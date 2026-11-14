@@ -107,14 +107,12 @@ export default function Billing() {
     setLoading(false);
   };
 
-  // Safe wrapper for printing
   const executePrint = () => {
     window.print();
   };
 
   return (
     <>
-      {/* POS Billing Form - Hidden during Print */}
       <div className="no-print" style={{ padding: '40px', maxWidth: '1400px', margin: '0 auto', display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
         <div>
           <h1 style={{ color: '#fff', margin: '0 0 24px 0', display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -187,10 +185,8 @@ export default function Billing() {
         </div>
       </div>
 
-      {/* Invoice Print Section (ONLY Visible during Print or when generated) */}
       {lastInvoice && (
         <div className="print-section" style={{ zIndex: 1000 }}>
-          
           <div className="no-print" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginBottom: '20px', padding: '20px', background: '#111' }}>
             <button onClick={executePrint} className="btn-success"><Printer size={16} /> Print Document</button>
             <button onClick={() => setLastInvoice(null)} className="btn-danger"><X size={16} /> Close Preview</button>
