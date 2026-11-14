@@ -27,25 +27,32 @@ export default function Billing() {
     ? products.filter(p => p.name?.toLowerCase().includes(searchTerm.toLowerCase()) || p.barcode?.includes(searchTerm))
     : [];
 
-  // 3. कार्ट में आइटम जोड़ना
+  // 3. कार्ट में आइटम जोड़ना (डिफ़ॉल्ट डिस्काउंट 0 के साथ)
   const addToCart = (product) => {
     const existing = cart.find(item => item.id === product.id);
     if (existing) {
       setCart(cart.map(item => item.id === product.id ? { ...item, qty: item.qty + 1 } : item));
     } else {
-      setCart([...cart, { ...product, qty: 1 }]);
+      setCart([...cart, { ...product, qty: 1, discount: 0 }]);
     }
-    setSearchTerm(''); // ऐड करने के बाद सर्च बार खाली करें
+    setSearchTerm('');
   };
 
-  // 4. कार्ट से हटाना और क्वांटिटी अपडेट करना
+  // 4. कार्ट अपडेट फंक्शन (रिमूव, क्वांटिटी, डिस्काउंट)
   const removeFromCart = (id) => setCart(cart.filter(item => item.id !== id));
+  
   const updateQty = (id, newQty) => {
     if (newQty < 1) return;
     setCart(cart.map(item => item.id === id ? { ...item, qty: parseInt(newQty) } : item));
   };
 
-  // 5. टैक्स और टोटल कैलकुलेशन (MRP Inclusive GST)
+  const updateDiscount = (id, newDiscount) => {
+    setCart(cart.map(item => item.id === id ? { ...item, discount: Number(newDiscount) } : item));
+  };
+
+  // 5. टैक्स, आइटम-वाइज डिस्काउंट और टोटल कैलकुलेशन
+  let subTotal = 0;
+  let totalDiscount = 0;
   let totalTaxable = 0;
   let totalTaxAmount = 0;
   let grandTotal = 0;
@@ -53,15 +60,20 @@ export default function Billing() {
   cart.forEach(item => {
     const rate = Number(item.mrp) || 0;
     const qty = Number(item.qty) || 1;
+    const itemDiscount = Number(item.discount) || 0;
     const gstPercent = Number(item.gst_rate?.replace('%', '') || 0);
 
-    const itemTotalInclusive = rate * qty;
-    const itemTaxable = itemTotalInclusive / (1 + (gstPercent / 100));
-    const itemTax = itemTotalInclusive - itemTaxable;
+    const itemGross = rate * qty;
+    const itemNet = Math.max(0, itemGross - itemDiscount); // डिस्काउंट के बाद की कीमत
 
+    const itemTaxable = itemNet / (1 + (gstPercent / 100));
+    const itemTax = itemNet - itemTaxable;
+
+    subTotal += itemGross;
+    totalDiscount += itemDiscount;
     totalTaxable += itemTaxable;
     totalTaxAmount += itemTax;
-    grandTotal += itemTotalInclusive;
+    grandTotal += itemNet;
   });
 
   // 6. इनवॉइस जनरेट करना और सेव करना
@@ -75,13 +87,15 @@ export default function Billing() {
         customer,
         items: cart,
         gstType,
+        subTotal: Number(subTotal.toFixed(2)),
+        totalDiscount: Number(totalDiscount.toFixed(2)),
         totalTaxable: Number(totalTaxable.toFixed(2)),
         totalTaxAmount: Number(totalTaxAmount.toFixed(2)),
         grandTotal: Number(grandTotal.toFixed(2)),
         timestamp: new Date()
       });
       alert("✅ Invoice Generated Successfully!");
-      setCart([]); // बिल बनने के बाद कार्ट खाली
+      setCart([]);
       setCustomer({ mobile: '', name: '', address: '' });
     } catch (error) {
       alert("Error generating invoice: " + error.message);
@@ -100,7 +114,6 @@ export default function Billing() {
         
         <div className="card" style={{ padding: '16px', minHeight: '500px' }}>
           
-          {/* Search Bar */}
           <div style={{ position: 'relative', marginBottom: '20px' }}>
             <Search style={{ position: 'absolute', left: '12px', top: '12px', color: '#888' }} size={20} />
             <input 
@@ -112,7 +125,6 @@ export default function Billing() {
               style={{ fontSize: '18px', padding: '12px 12px 12px 40px', margin: 0 }} 
             />
             
-            {/* Search Dropdown */}
             {searchResults.length > 0 && (
               <div style={{ position: 'absolute', top: '55px', left: 0, right: 0, background: '#222', border: '1px solid #444', borderRadius: '8px', zIndex: 10, maxHeight: '250px', overflowY: 'auto' }}>
                 {searchResults.map(item => (
@@ -131,7 +143,6 @@ export default function Billing() {
             )}
           </div>
           
-          {/* Cart Table */}
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
               <thead>
@@ -139,36 +150,49 @@ export default function Billing() {
                   <th style={{ padding: '12px', color: '#eab308' }}>Item</th>
                   <th style={{ padding: '12px', color: '#eab308' }}>Rate</th>
                   <th style={{ padding: '12px', color: '#eab308' }}>Qty</th>
-                  <th style={{ padding: '12px', color: '#eab308' }}>GST %</th>
-                  <th style={{ padding: '12px', color: '#eab308' }}>Total</th>
+                  <th style={{ padding: '12px', color: '#38bdf8' }}>Disc (₹)</th>
+                  <th style={{ padding: '12px', color: '#eab308' }}>GST%</th>
+                  <th style={{ padding: '12px', color: '#eab308' }}>Net Total</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
-                {cart.map(item => (
-                  <tr key={item.id} style={{ borderBottom: '1px solid #222' }}>
-                    <td style={{ padding: '12px', color: '#38bdf8', fontWeight: 'bold' }}>
-                      {item.name}<br/>
-                      <small style={{color:'#888', fontWeight:'normal'}}>Stock: {item.stock}</small>
-                    </td>
-                    <td style={{ padding: '12px' }}>₹ {item.mrp}</td>
-                    <td style={{ padding: '12px' }}>
-                      <input 
-                        type="number" 
-                        value={item.qty} 
-                        onChange={(e) => updateQty(item.id, e.target.value)}
-                        style={{ width: '70px', margin: 0, padding: '8px', background: '#000' }} 
-                      />
-                    </td>
-                    <td style={{ padding: '12px' }}>{item.gst_rate}</td>
-                    <td style={{ padding: '12px', fontWeight: 'bold', fontSize: '16px' }}>₹ {(item.mrp * item.qty).toLocaleString()}</td>
-                    <td style={{ padding: '12px' }}>
-                      <button onClick={() => removeFromCart(item.id)} className="btn-danger" style={{padding:'8px'}}><Trash2 size={16}/></button>
-                    </td>
-                  </tr>
-                ))}
+                {cart.map(item => {
+                  const netTotal = Math.max(0, (item.mrp * item.qty) - (item.discount || 0));
+                  return (
+                    <tr key={item.id} style={{ borderBottom: '1px solid #222' }}>
+                      <td style={{ padding: '12px', color: '#38bdf8', fontWeight: 'bold' }}>
+                        {item.name}<br/>
+                        <small style={{color:'#888', fontWeight:'normal'}}>Stock: {item.stock}</small>
+                      </td>
+                      <td style={{ padding: '12px' }}>₹ {item.mrp}</td>
+                      <td style={{ padding: '12px' }}>
+                        <input 
+                          type="number" 
+                          value={item.qty} 
+                          onChange={(e) => updateQty(item.id, e.target.value)}
+                          style={{ width: '60px', margin: 0, padding: '8px', background: '#000' }} 
+                        />
+                      </td>
+                      <td style={{ padding: '12px' }}>
+                        <input 
+                          type="number" 
+                          placeholder="0"
+                          value={item.discount || ''} 
+                          onChange={(e) => updateDiscount(item.id, e.target.value)}
+                          style={{ width: '80px', margin: 0, padding: '8px', background: '#222', color: '#38bdf8', fontWeight: 'bold' }} 
+                        />
+                      </td>
+                      <td style={{ padding: '12px' }}>{item.gst_rate}</td>
+                      <td style={{ padding: '12px', fontWeight: 'bold', fontSize: '16px' }}>₹ {netTotal.toLocaleString()}</td>
+                      <td style={{ padding: '12px' }}>
+                        <button onClick={() => removeFromCart(item.id)} className="btn-danger" style={{padding:'8px'}}><Trash2 size={16}/></button>
+                      </td>
+                    </tr>
+                  )
+                })}
                 {cart.length === 0 && (
-                  <tr><td colSpan="6" style={{textAlign:'center', padding:'40px', color:'#888'}}>Cart is empty. Search items to add.</td></tr>
+                  <tr><td colSpan="7" style={{textAlign:'center', padding:'40px', color:'#888'}}>Cart is empty. Search items to add.</td></tr>
                 )}
               </tbody>
             </table>
@@ -186,9 +210,6 @@ export default function Billing() {
           
           <label style={{color:'#888', fontSize:'12px', textTransform:'uppercase'}}>Customer Name</label>
           <input type="text" placeholder="Customer Name" value={customer.name} onChange={e => setCustomer({...customer, name: e.target.value})} />
-          
-          <label style={{color:'#888', fontSize:'12px', textTransform:'uppercase'}}>Customer Address</label>
-          <input type="text" placeholder="Billing Address" value={customer.address} onChange={e => setCustomer({...customer, address: e.target.value})} />
         </div>
 
         <div style={{ marginBottom: '20px' }}>
@@ -203,8 +224,18 @@ export default function Billing() {
           </div>
         </div>
 
-        {/* Totals Box */}
         <div style={{ background: '#000', padding: '16px', borderRadius: '8px', marginBottom: '20px' }}>
+          
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', color: '#888' }}>
+            <span>Total Value</span>
+            <span>₹ {subTotal.toFixed(2)}</span>
+          </div>
+          
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px dashed #333' }}>
+            <span style={{ color: '#38bdf8' }}>Total Discount</span>
+            <span style={{ color: '#38bdf8' }}>- ₹ {totalDiscount.toFixed(2)}</span>
+          </div>
+
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', color: '#888' }}>
             <span>Taxable Amount</span>
             <span>₹ {totalTaxable.toFixed(2)}</span>
