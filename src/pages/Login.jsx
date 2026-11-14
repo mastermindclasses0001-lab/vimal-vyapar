@@ -11,7 +11,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [storeName, setStoreName] = useState('SMART POS');
+  const [storeName, setStoreName] = useState('VIMAL VYAPAR');
 
   useEffect(() => {
     const fetchSettings = async () => {

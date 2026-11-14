@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Package, Plus, Search, Download, AlertCircle, X, Trash2 } from 'lucide-react';
-import { exportToExcel } from '../utils/excelExport';
+import { Package, Plus, Search, AlertCircle, X, Trash2, Download } from 'lucide-react';
 import { collection, getDocs, addDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { useAuth } from '../context/AuthContext';
+import { exportToExcel } from '../utils/excelExport';
 
 export default function Inventory() {
+  const { currentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [products, setProducts] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -50,16 +52,17 @@ export default function Inventory() {
     }
   };
 
-  const handleExport = () => exportToExcel(products, 'Inventory');
-
+  const handleExport = () => exportToExcel(products, 'Inventory_Data');
+  
   const filteredData = products.filter(item => item.name?.toLowerCase().includes(searchTerm.toLowerCase()) || item.barcode?.includes(searchTerm));
+  const isAdmin = currentUser?.role === 'admin';
 
   return (
-    <div style={{ padding: '40px', maxWidth: '1400px', margin: '0 auto' }}>
+    <div className="no-print" style={{ padding: '40px', maxWidth: '1400px', margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-        <h1 style={{ color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '12px' }}><Package color="#22c55e" size={32} /> Real-Time Inventory</h1>
+        <h1 style={{ color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '12px' }}><Package color="#22c55e" size={32} /> Live Inventory</h1>
         <div style={{ display: 'flex', gap: '10px' }}>
-          <button onClick={handleExport} className="btn-outline"><Download size={18} /> Export Excel</button>
+          {isAdmin && <button onClick={handleExport} className="btn-outline"><Download size={18} /> Export Excel</button>}
           <button onClick={() => setShowModal(true)} className="btn-success"><Plus size={18} /> Add Product</button>
         </div>
       </div>
@@ -72,7 +75,7 @@ export default function Inventory() {
       <div className="table-container">
         <table>
           <thead>
-            <tr><th>Barcode</th><th>Product Name</th><th>Category</th><th>Purchase Rate</th><th>MRP</th><th>GST %</th><th>Live Stock</th><th>Status</th><th>Action</th></tr>
+            <tr><th>Barcode</th><th>Product Name</th><th>Category</th>{isAdmin && <th>Purchase Rate</th>}<th>MRP</th><th>GST %</th><th>Live Stock</th><th>Status</th><th>Action</th></tr>
           </thead>
           <tbody>
             {filteredData.map(item => {
@@ -82,7 +85,7 @@ export default function Inventory() {
                   <td style={{ color: '#888' }}>{item.barcode}</td>
                   <td style={{ fontWeight: 'bold', color: '#38bdf8' }}>{item.name}</td>
                   <td>{item.category}</td>
-                  <td>₹ {item.purchase_price}</td>
+                  {isAdmin && <td style={{color: '#ef4444'}}>₹ {item.purchase_price}</td>}
                   <td style={{ color: '#eab308' }}>₹ {item.mrp}</td>
                   <td>{item.gst_rate}</td>
                   <td><span style={{ fontSize: '18px', fontWeight: 'bold', color: isLow ? '#ef4444' : '#fff' }}>{item.stock}</span></td>
@@ -91,7 +94,7 @@ export default function Inventory() {
                 </tr>
               )
             })}
-            {products.length === 0 && <tr><td colSpan="9" style={{textAlign:'center', color:'#888', padding:'30px'}}>No products in database.</td></tr>}
+            {products.length === 0 && <tr><td colSpan={isAdmin ? 9 : 8} style={{textAlign:'center', color:'#888', padding:'30px'}}>No products in database.</td></tr>}
           </tbody>
         </table>
       </div>

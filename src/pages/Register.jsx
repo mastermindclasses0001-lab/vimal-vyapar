@@ -9,6 +9,7 @@ export default function Register() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '', role: 'seller' });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -16,6 +17,7 @@ export default function Register() {
     if (form.password.length < 6) return setError('Password must be at least 6 characters');
     setError('');
     
+    setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, form.email, form.password);
       const user = userCredential.user;
@@ -31,9 +33,8 @@ export default function Register() {
     } catch (err) {
       setError(err.message.replace('Firebase: ', '')); 
     }
+    setLoading(false);
   };
-
-  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
   return (
     <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', padding: '20px' }}>
@@ -42,23 +43,21 @@ export default function Register() {
           <UserPlus color="#22c55e" size={32} />
           <h2 style={{ margin: 0, color: '#fff' }}>Create Account</h2>
         </div>
-        
         {error && <p style={{ color: '#ef4444', textAlign: 'center', background: '#450a0a', padding: '10px', borderRadius: '6px' }}>{error}</p>}
-        
         <form onSubmit={handleSubmit}>
-          <input placeholder="Full Name" required value={form.name} onChange={set('name')} />
-          <input type="email" placeholder="Email Address" required value={form.email} onChange={set('email')} />
-          <input type="password" placeholder="Password (Min 6 chars)" required value={form.password} onChange={set('password')} />
-          <input type="password" placeholder="Confirm Password" required value={form.confirm} onChange={set('confirm')} />
-          
+          <input placeholder="Full Name" required value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
+          <input type="email" placeholder="Email Address" required value={form.email} onChange={e => setForm({...form, email: e.target.value})} />
+          <input type="password" placeholder="Password (Min 6 chars)" required value={form.password} onChange={e => setForm({...form, password: e.target.value})} />
+          <input type="password" placeholder="Confirm Password" required value={form.confirm} onChange={e => setForm({...form, confirm: e.target.value})} />
           <label style={{color:'#888', marginBottom:'5px', display:'block'}}>Assign Role:</label>
-          <select value={form.role} onChange={set('role')}>
+          <select value={form.role} onChange={e => setForm({...form, role: e.target.value})}>
             <option value="seller">Seller / Cashier</option>
             <option value="inventory">Inventory Manager</option>
             <option value="admin">System Admin</option>
           </select>
-
-          <button className="btn-success" type="submit" style={{ width: '100%', fontSize: '16px', padding: '14px', marginTop: '10px', justifyContent: 'center' }}>Register User</button>
+          <button className="btn-success" type="submit" style={{ width: '100%', fontSize: '16px', padding: '14px', marginTop: '10px', justifyContent: 'center' }} disabled={loading}>
+            {loading ? 'Creating...' : 'Register User'}
+          </button>
         </form>
         <p style={{ textAlign: 'center', marginTop: '20px', color: '#888' }}>
           Already registered? <Link to="/login" style={{ color: '#eab308' }}>Login Here</Link>
