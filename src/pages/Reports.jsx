@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { BarChart3, Download, Package, Users, Tag } from 'lucide-react';
-import { collection, getDocs } from 'firebase/firestore';
+import { BarChart3, Download, Package, Users, Tag, Calendar } from 'lucide-react';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
 import { exportToExcel } from '../utils/excelExport';
 import { useAuth } from '../context/AuthContext';
@@ -19,17 +19,20 @@ export default function Reports() {
 
   useEffect(() => {
     const fetchAllData = async () => {
-      const iSnap = await getDocs(collection(db, "invoices"));
-      const pSnap = await getDocs(collection(db, "products"));
-      
-      const invs = [];
-      iSnap.forEach(doc => invs.push(doc.data()));
-      setInvoices(invs.sort((a,b) => b.timestamp - a.timestamp));
+      try {
+        // Query database safely with direct descending order
+        const iSnap = await getDocs(query(collection(db, "invoices"), orderBy("timestamp", "desc")));
+        const invs = [];
+        iSnap.forEach(doc => invs.push(doc.data()));
+        setInvoices(invs);
 
-      const prods = [];
-      pSnap.forEach(doc => prods.push({id: doc.id, ...doc.data()}));
-      setProducts(prods);
-      
+        const pSnap = await getDocs(collection(db, "products"));
+        const prods = [];
+        pSnap.forEach(doc => prods.push({id: doc.id, ...doc.data()}));
+        setProducts(prods);
+      } catch (error) {
+        console.error("Error loading reports data:", error);
+      }
       setLoading(false);
     };
     fetchAllData();
@@ -39,20 +42,28 @@ export default function Reports() {
   const getSalesReport = () => {
     const rMap = {};
     invoices.forEach(data => {
-      let key = data.date;
+      let key = data.date || 'Unknown Date';
       
       if (salesFilter === 'monthly') {
-        const parts = data.date.split('/');
-        key = `${parts[1]}/${parts[2]}`; // MM/YYYY
+        const parts = key.split('/');
+        if(parts.length === 3) key = `${parts[1]}/${parts[2]}`; // MM/YYYY
       } else if (salesFilter === 'custom') {
-        // Simple fallback if no custom date selected
-        if(!customStart || !customEnd) key = 'Custom Range';
-        else {
-          const invDate = new Date(data.timestamp.toDate());
-          const sDate = new Date(customStart);
-          const eDate = new Date(customEnd);
-          if(invDate >= sDate && invDate <= eDate) key = `${customStart} to ${customEnd}`;
-          else return; // skip
+        if(!customStart || !customEnd) {
+            key = 'Custom Range';
+        } else {
+            if(data.timestamp) {
+                const invDate = new Date(data.timestamp.toDate());
+                const sDate = new Date(customStart);
+                const eDate = new Date(customEnd);
+                eDate.setHours(23, 59, 59); // include end of day
+                if(invDate >= sDate && invDate <= eDate) {
+                    key = `${customStart} to ${customEnd}`;
+                } else {
+                    return; // Skip if outside date range
+                }
+            } else {
+                return;
+            }
         }
       }
 
@@ -72,24 +83,25 @@ export default function Reports() {
 
   // 2. INVENTORY REPORT LOGIC
   const getInventoryReport = () => {
-    // Calculate total sold qty per product from invoices
     const soldMap = {};
     invoices.forEach(inv => {
       inv.items?.forEach(item => {
-        if(!soldMap[item.barcode]) soldMap[item.barcode] = 0;
-        soldMap[item.barcode] += Number(item.qty);
+        if(item.barcode) {
+            if(!soldMap[item.barcode]) soldMap[item.barcode] = 0;
+            soldMap[item.barcode] += Number(item.qty || 0);
+        }
       });
     });
 
     return products.map(p => ({
-      Barcode: p.barcode,
-      Product_Name: p.name,
-      Category: p.category,
+      Barcode: p.barcode || 'N/A',
+      Product_Name: p.name || 'N/A',
+      Category: p.category || 'N/A',
       Total_Sold_Qty: soldMap[p.barcode] || 0,
-      Remaining_Stock: p.stock,
-      Purchase_Rate: p.purchase_price,
-      MRP: p.mrp,
-      Stock_Value: p.stock * p.purchase_price
+      Remaining_Stock: p.stock || 0,
+      Purchase_Rate: p.purchase_price || 0,
+      MRP: p.mrp || 0,
+      Stock_Value: (p.stock || 0) * (p.purchase_price || 0)
     }));
   };
 
@@ -98,19 +110,20 @@ export default function Reports() {
     const pMap = {};
     invoices.forEach(inv => {
       inv.items?.forEach(item => {
-        if(!pMap[item.barcode]) {
-          pMap[item.barcode] = { Barcode: item.barcode, Product_Name: item.name, Total_Qty_Sold: 0, Total_Revenue: 0, Buyers: new Set() };
+        const bc = item.barcode || 'Unknown';
+        if(!pMap[bc]) {
+          pMap[bc] = { Barcode: bc, Product_Name: item.name || 'N/A', Total_Qty_Sold: 0, Total_Revenue: 0, Buyers: new Set() };
         }
-        pMap[item.barcode].Total_Qty_Sold += Number(item.qty);
-        pMap[item.barcode].Total_Revenue += (Number(item.mrp) * Number(item.qty)) - (Number(item.discount) || 0);
-        if(inv.customer?.name) pMap[item.barcode].Buyers.add(inv.customer.name);
+        pMap[bc].Total_Qty_Sold += Number(item.qty || 0);
+        pMap[bc].Total_Revenue += (Number(item.mrp || 0) * Number(item.qty || 0)) - (Number(item.discount || 0));
+        if(inv.customer?.name) pMap[bc].Buyers.add(inv.customer.name);
       });
     });
     
     return Object.values(pMap).map(p => ({
       ...p,
-      Buyers: Array.from(p.Buyers).join(', ') // Convert Set to String
-    })).sort((a,b) => b.Total_Qty_Sold - a.Total_Qty_Sold); // Sort Bestsellers first
+      Buyers: Array.from(p.Buyers).join(', ') 
+    })).sort((a,b) => b.Total_Qty_Sold - a.Total_Qty_Sold); 
   };
 
   // 4. CUSTOMER WISE REPORT
@@ -119,7 +132,7 @@ export default function Reports() {
     invoices.forEach(inv => {
       const mob = inv.customer?.mobile || 'Walk-in';
       if(!cMap[mob]) {
-        cMap[mob] = { Mobile: mob, Customer_Name: inv.customer?.name || 'Walk-in', Total_Purchases: 0, Total_Profit_From_Them: 0, Last_Visit: inv.date, Items_Bought: new Set() };
+        cMap[mob] = { Mobile: mob, Customer_Name: inv.customer?.name || 'Walk-in', Total_Purchases: 0, Total_Profit_From_Them: 0, Last_Visit: inv.date || '', Items_Bought: new Set() };
       }
       
       cMap[mob].Total_Purchases += Number(inv.grandTotal || 0);
@@ -127,19 +140,26 @@ export default function Reports() {
       let cogs = 0;
       inv.items?.forEach(item => { 
         cogs += (Number(item.purchase_price || 0) * Number(item.qty || 1)); 
-        cMap[mob].Items_Bought.add(item.name);
+        if(item.name) cMap[mob].Items_Bought.add(item.name);
       });
       cMap[mob].Total_Profit_From_Them += (Number(inv.totalTaxable || 0) - cogs);
-      cMap[mob].Last_Visit = inv.date; 
+      
+      // Keep most recent visit date based on DESC ordering
+      if(!cMap[mob].Last_Visit_Date || (inv.timestamp && new Date(inv.timestamp.toDate()) > cMap[mob].Last_Visit_Date)) {
+         cMap[mob].Last_Visit = inv.date;
+         if(inv.timestamp) cMap[mob].Last_Visit_Date = new Date(inv.timestamp.toDate());
+      }
     });
 
-    return Object.values(cMap).map(c => ({
-      ...c,
-      Items_Bought: Array.from(c.Items_Bought).join(', ')
-    })).sort((a,b) => b.Total_Purchases - a.Total_Purchases);
+    return Object.values(cMap).map(c => {
+      const { Last_Visit_Date, ...rest } = c;
+      return {
+        ...rest,
+        Items_Bought: Array.from(rest.Items_Bought).join(', ')
+      };
+    }).sort((a,b) => b.Total_Purchases - a.Total_Purchases);
   };
 
-  // Render Logic
   let tableData = [];
   if(activeTab === 'sales') tableData = getSalesReport();
   if(activeTab === 'inventory') tableData = getInventoryReport();
@@ -161,17 +181,15 @@ export default function Reports() {
         <button onClick={handleExport} className="btn-success"><Download size={18} /> Export Current Data</button>
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', borderBottom: '2px solid #333', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', borderBottom: '2px solid #333', marginBottom: '20px', flexWrap: 'wrap' }}>
         <button className={`tab-btn ${activeTab === 'sales' ? 'active' : ''}`} onClick={() => setActiveTab('sales')}><BarChart3 size={16} style={{display:'inline', verticalAlign:'text-bottom', marginRight:'5px'}}/> Sales & Profit</button>
         <button className={`tab-btn ${activeTab === 'inventory' ? 'active' : ''}`} onClick={() => setActiveTab('inventory')}><Package size={16} style={{display:'inline', verticalAlign:'text-bottom', marginRight:'5px'}}/> Inventory Status</button>
         <button className={`tab-btn ${activeTab === 'products' ? 'active' : ''}`} onClick={() => setActiveTab('products')}><Tag size={16} style={{display:'inline', verticalAlign:'text-bottom', marginRight:'5px'}}/> Product Performance</button>
         <button className={`tab-btn ${activeTab === 'customers' ? 'active' : ''}`} onClick={() => setActiveTab('customers')}><Users size={16} style={{display:'inline', verticalAlign:'text-bottom', marginRight:'5px'}}/> Customer Analytics</button>
       </div>
 
-      {/* Filters for Sales Tab Only */}
       {activeTab === 'sales' && (
-        <div className="card" style={{ display: 'flex', gap: '20px', alignItems: 'center', padding: '16px' }}>
+        <div className="card" style={{ display: 'flex', gap: '20px', alignItems: 'center', padding: '16px', flexWrap: 'wrap' }}>
           <Calendar color="#888" />
           <select style={{ width: '200px', margin: 0 }} value={salesFilter} onChange={(e) => setSalesFilter(e.target.value)}>
             <option value="daily">All-Time Daily Report</option>
@@ -179,16 +197,15 @@ export default function Reports() {
             <option value="custom">Custom Date Range</option>
           </select>
           {salesFilter === 'custom' && (
-             <div style={{ display: 'flex', gap: '10px' }}>
+             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                <input type="date" value={customStart} onChange={e=>setCustomStart(e.target.value)} style={{ margin: 0, width:'150px' }} />
-               <span style={{color:'#888', alignSelf:'center'}}>to</span>
+               <span style={{color:'#888'}}>to</span>
                <input type="date" value={customEnd} onChange={e=>setCustomEnd(e.target.value)} style={{ margin: 0, width:'150px' }} />
              </div>
           )}
         </div>
       )}
 
-      {/* Dynamic Table Rendering */}
       <div className="table-container">
         {loading ? <div style={{padding:'20px', color:'#eab308'}}>Calculating Data...</div> : (
           <table>
