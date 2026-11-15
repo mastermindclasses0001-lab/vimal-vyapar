@@ -30,22 +30,21 @@ export default function Navbar() {
 
   if (!currentUser) return null;
 
-  // Strict Roles: Seller can only see Dashboard, Billing, Inventory(View Only)
   const links = [
     { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={18} />, roles: ['admin', 'seller'] },
-    { name: 'Billing POS', path: '/billing', icon: <Receipt size={18} />, roles: ['admin', 'seller'] },
+    { name: 'Billing', path: '/billing', icon: <Receipt size={18} />, roles: ['admin', 'seller'] },
     { name: 'Inventory', path: '/inventory', icon: <Package size={18} />, roles: ['admin', 'seller'] },
-    { name: 'Master Reports', path: '/reports', icon: <BarChart3 size={18} />, roles: ['admin'] },
+    { name: 'Reports', path: '/reports', icon: <BarChart3 size={18} />, roles: ['admin'] },
   ];
 
   return (
-    <nav className="no-print" style={{ background: '#111', padding: '0 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #eab308', position: 'sticky', top: 0, zIndex: 100 }}>
-      <div style={{ padding: '16px 0' }}>
+    <nav className="no-print nav-container" style={{ background: '#111', padding: '0 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #eab308', position: 'sticky', top: 0, zIndex: 100 }}>
+      <div className="nav-header" style={{ padding: '16px 0' }}>
         <h2 style={{ margin: 0, color: '#eab308', letterSpacing: '2px', fontSize: '24px', textTransform: 'uppercase' }}>{storeName}</h2>
         <small style={{ color: '#38bdf8', fontSize: '10px', letterSpacing: '2px' }}>PRO EDITION</small>
       </div>
       
-      <div style={{ display: 'flex', gap: '8px' }}>
+      <div className="nav-links" style={{ display: 'flex', gap: '8px' }}>
         {links.filter(link => link.roles.includes(currentUser.role)).map(link => {
           const isActive = location.pathname === link.path;
           return (
@@ -61,12 +60,12 @@ export default function Navbar() {
         )}
       </div>
 
-      <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+      <div className="nav-user" style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
         <div style={{ textAlign: 'right' }}>
           <div style={{ color: '#22c55e', fontWeight: 'bold', textTransform: 'capitalize' }}>{currentUser.name}</div>
           <div style={{ color: '#888', fontSize: '12px', textTransform: 'capitalize' }}>{currentUser.role}</div>
         </div>
-        <button onClick={handleLogout} className="btn-danger">
+        <button onClick={handleLogout} className="btn btn-danger" style={{padding: '8px 12px'}}>
           <LogOut size={16} /> Logout
         </button>
       </div>

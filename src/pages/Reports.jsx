@@ -12,7 +12,6 @@ export default function Reports() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Filters for Sales Report
   const [salesFilter, setSalesFilter] = useState('daily');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
@@ -20,7 +19,6 @@ export default function Reports() {
   useEffect(() => {
     const fetchAllData = async () => {
       try {
-        // Query database safely with direct descending order
         const iSnap = await getDocs(query(collection(db, "invoices"), orderBy("timestamp", "desc")));
         const invs = [];
         iSnap.forEach(doc => invs.push(doc.data()));
@@ -31,14 +29,13 @@ export default function Reports() {
         pSnap.forEach(doc => prods.push({id: doc.id, ...doc.data()}));
         setProducts(prods);
       } catch (error) {
-        console.error("Error loading reports data:", error);
+        console.error("Error:", error);
       }
       setLoading(false);
     };
     fetchAllData();
   }, []);
 
-  // 1. SALES REPORT LOGIC
   const getSalesReport = () => {
     const rMap = {};
     invoices.forEach(data => {
@@ -46,7 +43,7 @@ export default function Reports() {
       
       if (salesFilter === 'monthly') {
         const parts = key.split('/');
-        if(parts.length === 3) key = `${parts[1]}/${parts[2]}`; // MM/YYYY
+        if(parts.length === 3) key = `${parts[1]}/${parts[2]}`; 
       } else if (salesFilter === 'custom') {
         if(!customStart || !customEnd) {
             key = 'Custom Range';
@@ -55,24 +52,17 @@ export default function Reports() {
                 const invDate = new Date(data.timestamp.toDate());
                 const sDate = new Date(customStart);
                 const eDate = new Date(customEnd);
-                eDate.setHours(23, 59, 59); // include end of day
+                eDate.setHours(23, 59, 59);
                 if(invDate >= sDate && invDate <= eDate) {
                     key = `${customStart} to ${customEnd}`;
-                } else {
-                    return; // Skip if outside date range
-                }
-            } else {
-                return;
-            }
+                } else return; 
+            } else return;
         }
       }
 
-      if(!rMap[key]) {
-        rMap[key] = { Date: key, Gross_Sales: 0, COGS: 0, Discount: 0, Net_Profit: 0 };
-      }
+      if(!rMap[key]) rMap[key] = { Date: key, Gross_Sales: 0, COGS: 0, Discount: 0, Net_Profit: 0 };
       rMap[key].Gross_Sales += Number(data.grandTotal || 0);
       rMap[key].Discount += Number(data.totalDiscount || 0);
-      
       let cogs = 0;
       data.items?.forEach(item => { cogs += (Number(item.purchase_price || 0) * Number(item.qty || 1)); });
       rMap[key].COGS += cogs;
@@ -81,7 +71,6 @@ export default function Reports() {
     return Object.values(rMap);
   };
 
-  // 2. INVENTORY REPORT LOGIC
   const getInventoryReport = () => {
     const soldMap = {};
     invoices.forEach(inv => {
@@ -105,38 +94,29 @@ export default function Reports() {
     }));
   };
 
-  // 3. PRODUCT WISE (Bestsellers)
   const getProductWiseReport = () => {
     const pMap = {};
     invoices.forEach(inv => {
       inv.items?.forEach(item => {
         const bc = item.barcode || 'Unknown';
-        if(!pMap[bc]) {
-          pMap[bc] = { Barcode: bc, Product_Name: item.name || 'N/A', Total_Qty_Sold: 0, Total_Revenue: 0, Buyers: new Set() };
-        }
+        if(!pMap[bc]) pMap[bc] = { Barcode: bc, Product_Name: item.name || 'N/A', Total_Qty_Sold: 0, Total_Revenue: 0, Buyers: new Set() };
         pMap[bc].Total_Qty_Sold += Number(item.qty || 0);
         pMap[bc].Total_Revenue += (Number(item.mrp || 0) * Number(item.qty || 0)) - (Number(item.discount || 0));
         if(inv.customer?.name) pMap[bc].Buyers.add(inv.customer.name);
       });
     });
-    
     return Object.values(pMap).map(p => ({
-      ...p,
-      Buyers: Array.from(p.Buyers).join(', ') 
+      ...p, Buyers: Array.from(p.Buyers).join(', ') 
     })).sort((a,b) => b.Total_Qty_Sold - a.Total_Qty_Sold); 
   };
 
-  // 4. CUSTOMER WISE REPORT
   const getCustomerWiseReport = () => {
     const cMap = {};
     invoices.forEach(inv => {
       const mob = inv.customer?.mobile || 'Walk-in';
-      if(!cMap[mob]) {
-        cMap[mob] = { Mobile: mob, Customer_Name: inv.customer?.name || 'Walk-in', Total_Purchases: 0, Total_Profit_From_Them: 0, Last_Visit: inv.date || '', Items_Bought: new Set() };
-      }
+      if(!cMap[mob]) cMap[mob] = { Mobile: mob, Customer_Name: inv.customer?.name || 'Walk-in', Total_Purchases: 0, Total_Profit_From_Them: 0, Last_Visit: inv.date || '', Items_Bought: new Set() };
       
       cMap[mob].Total_Purchases += Number(inv.grandTotal || 0);
-      
       let cogs = 0;
       inv.items?.forEach(item => { 
         cogs += (Number(item.purchase_price || 0) * Number(item.qty || 1)); 
@@ -144,7 +124,6 @@ export default function Reports() {
       });
       cMap[mob].Total_Profit_From_Them += (Number(inv.totalTaxable || 0) - cogs);
       
-      // Keep most recent visit date based on DESC ordering
       if(!cMap[mob].Last_Visit_Date || (inv.timestamp && new Date(inv.timestamp.toDate()) > cMap[mob].Last_Visit_Date)) {
          cMap[mob].Last_Visit = inv.date;
          if(inv.timestamp) cMap[mob].Last_Visit_Date = new Date(inv.timestamp.toDate());
@@ -153,10 +132,7 @@ export default function Reports() {
 
     return Object.values(cMap).map(c => {
       const { Last_Visit_Date, ...rest } = c;
-      return {
-        ...rest,
-        Items_Bought: Array.from(rest.Items_Bought).join(', ')
-      };
+      return { ...rest, Items_Bought: Array.from(rest.Items_Bought).join(', ') };
     }).sort((a,b) => b.Total_Purchases - a.Total_Purchases);
   };
 
@@ -166,22 +142,23 @@ export default function Reports() {
   if(activeTab === 'products') tableData = getProductWiseReport();
   if(activeTab === 'customers') tableData = getCustomerWiseReport();
 
-  const handleExport = () => {
-    exportToExcel(tableData, `Master_Report_${activeTab}`);
-  };
+  const handleExport = () => exportToExcel(tableData, `Master_Report_${activeTab}`);
 
   if (currentUser?.role !== 'admin') return null;
 
   return (
-    <div className="no-print" style={{ padding: '40px', maxWidth: '1400px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-        <h1 style={{ color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <BarChart3 color="#38bdf8" size={32} /> Master Reporting Center
-        </h1>
-        <button onClick={handleExport} className="btn-success"><Download size={18} /> Export Current Data</button>
+    <div className="no-print main-container">
+      <div className="header-flex">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <BarChart3 color="#38bdf8" size={32} />
+          <h1 style={{ color: '#fff', margin: 0 }}>Master Reporting Center</h1>
+        </div>
+        <div className="header-actions">
+           <button onClick={handleExport} className="btn btn-success"><Download size={18} /> Export Data</button>
+        </div>
       </div>
 
-      <div style={{ display: 'flex', borderBottom: '2px solid #333', marginBottom: '20px', flexWrap: 'wrap' }}>
+      <div className="tabs-container">
         <button className={`tab-btn ${activeTab === 'sales' ? 'active' : ''}`} onClick={() => setActiveTab('sales')}><BarChart3 size={16} style={{display:'inline', verticalAlign:'text-bottom', marginRight:'5px'}}/> Sales & Profit</button>
         <button className={`tab-btn ${activeTab === 'inventory' ? 'active' : ''}`} onClick={() => setActiveTab('inventory')}><Package size={16} style={{display:'inline', verticalAlign:'text-bottom', marginRight:'5px'}}/> Inventory Status</button>
         <button className={`tab-btn ${activeTab === 'products' ? 'active' : ''}`} onClick={() => setActiveTab('products')}><Tag size={16} style={{display:'inline', verticalAlign:'text-bottom', marginRight:'5px'}}/> Product Performance</button>
@@ -197,7 +174,7 @@ export default function Reports() {
             <option value="custom">Custom Date Range</option>
           </select>
           {salesFilter === 'custom' && (
-             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+             <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                <input type="date" value={customStart} onChange={e=>setCustomStart(e.target.value)} style={{ margin: 0, width:'150px' }} />
                <span style={{color:'#888'}}>to</span>
                <input type="date" value={customEnd} onChange={e=>setCustomEnd(e.target.value)} style={{ margin: 0, width:'150px' }} />

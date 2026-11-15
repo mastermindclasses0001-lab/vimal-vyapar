@@ -39,7 +39,6 @@ export default function Dashboard() {
 
         iSnap.forEach(doc => {
           const data = doc.data();
-          // Admin calculations (All Sales)
           if(data.date === todayStr) {
             tSales += Number(data.grandTotal || 0);
             let cogs = 0;
@@ -57,7 +56,6 @@ export default function Dashboard() {
             sellerId: data.sellerId
           });
 
-          // Seller Calculations (Only their own sales today)
           if(!isAdmin && data.sellerId === currentUser.uid && data.date === todayStr) {
             sSales += Number(data.grandTotal || 0);
             sTxs.push({
@@ -95,72 +93,53 @@ export default function Dashboard() {
   if (loading) return <div style={{padding: '40px', color: '#eab308'}}>Loading Real-Time Data...</div>;
 
   return (
-    <div className="no-print" style={{ padding: '40px', maxWidth: '1400px', margin: '0 auto' }}>
+    <div className="no-print main-container">
       
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #333', paddingBottom: '20px', marginBottom: '30px' }}>
+      <div className="header-flex">
         <div>
           <h1 style={{ color: '#eab308', margin: 0, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '10px' }}>
              <Store size={32} color="#eab308"/> {isAdmin ? 'EXECUTIVE DASHBOARD' : 'SELLER DASHBOARD'}
           </h1>
           <p style={{ color: '#888', margin: '10px 0 0 0' }}>Welcome, <strong style={{ color: '#fff', textTransform:'capitalize' }}>{currentUser?.name}</strong></p>
         </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div className="header-actions">
           {isAdmin && (
-            <button onClick={handleDriveBackup} className="btn-success" style={{background: '#4285F4', border:'none'}}>
-              <Cloud size={18} /> 1-Click Drive Backup
+            <button onClick={handleDriveBackup} className="btn btn-success" style={{background: '#4285F4', border:'none'}}>
+              <Cloud size={18} /> Backup
             </button>
           )}
-          <Link to="/billing" className="btn-primary" style={{textDecoration: 'none'}}><ShoppingCart size={18} /> New Sale</Link>
+          <Link to="/billing" className="btn btn-primary"><ShoppingCart size={18} /> New Sale</Link>
         </div>
       </div>
       
-      {/* ADMIN STATS */}
-      {isAdmin && (
+      {isAdmin ? (
         <div className="grid-4">
           <div className="card" style={{ borderTop: `4px solid #38bdf8`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <h3 style={{ color: '#888', margin: '0 0 10px 0', fontSize: '14px', textTransform: 'uppercase' }}>Today's Sales</h3>
-              <p style={{ fontSize: '32px', fontWeight: 'bold', margin: 0, color: '#fff' }}>₹ {stats.sales.toLocaleString('en-IN', {maximumFractionDigits:0})}</p>
-            </div>
+            <div><h3 style={{ color: '#888', margin: '0 0 10px 0', textTransform: 'uppercase' }}>Today's Sales</h3><p style={{ fontSize: '32px', fontWeight: 'bold', margin: 0, color: '#fff' }}>₹ {stats.sales.toLocaleString('en-IN', {maximumFractionDigits:0})}</p></div>
             <div style={{ background: '#222', padding: '16px', borderRadius: '50%' }}><IndianRupee size={24} color="#38bdf8" /></div>
           </div>
           <div className="card" style={{ borderTop: `4px solid #eab308`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <h3 style={{ color: '#888', margin: '0 0 10px 0', fontSize: '14px', textTransform: 'uppercase' }}>Today's Profit</h3>
-              <p style={{ fontSize: '32px', fontWeight: 'bold', margin: 0, color: '#fff' }}>₹ {stats.profit.toLocaleString('en-IN', {maximumFractionDigits:0})}</p>
-            </div>
+            <div><h3 style={{ color: '#888', margin: '0 0 10px 0', textTransform: 'uppercase' }}>Today's Profit</h3><p style={{ fontSize: '32px', fontWeight: 'bold', margin: 0, color: '#fff' }}>₹ {stats.profit.toLocaleString('en-IN', {maximumFractionDigits:0})}</p></div>
             <div style={{ background: '#222', padding: '16px', borderRadius: '50%' }}><TrendingUp size={24} color="#eab308" /></div>
           </div>
           <div className="card" style={{ borderTop: `4px solid #22c55e`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <h3 style={{ color: '#888', margin: '0 0 10px 0', fontSize: '14px', textTransform: 'uppercase' }}>Active Products</h3>
-              <p style={{ fontSize: '32px', fontWeight: 'bold', margin: 0, color: '#fff' }}>{stats.active} Items</p>
-            </div>
+            <div><h3 style={{ color: '#888', margin: '0 0 10px 0', textTransform: 'uppercase' }}>Active Products</h3><p style={{ fontSize: '32px', fontWeight: 'bold', margin: 0, color: '#fff' }}>{stats.active}</p></div>
             <div style={{ background: '#222', padding: '16px', borderRadius: '50%' }}><Package size={24} color="#22c55e" /></div>
           </div>
           <div className="card" style={{ borderTop: `4px solid #ef4444`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <h3 style={{ color: '#888', margin: '0 0 10px 0', fontSize: '14px', textTransform: 'uppercase' }}>Stock Alerts</h3>
-              <p style={{ fontSize: '32px', fontWeight: 'bold', margin: 0, color: '#fff' }}>{stats.lowStock} Alerts</p>
-            </div>
+            <div><h3 style={{ color: '#888', margin: '0 0 10px 0', textTransform: 'uppercase' }}>Stock Alerts</h3><p style={{ fontSize: '32px', fontWeight: 'bold', margin: 0, color: '#fff' }}>{stats.lowStock}</p></div>
             <div style={{ background: '#222', padding: '16px', borderRadius: '50%' }}><AlertTriangle size={24} color="#ef4444" /></div>
           </div>
         </div>
-      )}
-
-      {/* SELLER STATS (Restricted View) */}
-      {!isAdmin && (
+      ) : (
         <div className="grid-2">
           <div className="card" style={{ borderTop: `4px solid #38bdf8`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <h3 style={{ color: '#888', margin: '0 0 10px 0', fontSize: '14px', textTransform: 'uppercase' }}>My Total Sales (Today)</h3>
-              <p style={{ fontSize: '32px', fontWeight: 'bold', margin: 0, color: '#fff' }}>₹ {stats.sales.toLocaleString('en-IN', {maximumFractionDigits:0})}</p>
-            </div>
+            <div><h3 style={{ color: '#888', margin: '0 0 10px 0', textTransform: 'uppercase' }}>My Total Sales (Today)</h3><p style={{ fontSize: '32px', fontWeight: 'bold', margin: 0, color: '#fff' }}>₹ {stats.sales.toLocaleString('en-IN', {maximumFractionDigits:0})}</p></div>
             <div style={{ background: '#222', padding: '16px', borderRadius: '50%' }}><IndianRupee size={24} color="#38bdf8" /></div>
           </div>
           <div className="card" style={{ textAlign: 'center', padding: '20px' }}>
             <h2 style={{color: '#eab308', margin: 0}}>Billing Portal Active</h2>
-            <p style={{color: '#888', margin: '10px 0'}}>Salesman View. Profit & Advanced Reports are hidden.</p>
+            <p style={{color: '#888', margin: '10px 0'}}>Salesman View. Advanced Reports are hidden.</p>
           </div>
         </div>
       )}
@@ -171,18 +150,13 @@ export default function Dashboard() {
           <div className="table-container">
             <table>
               <thead>
-                <tr>
-                  <th>Invoice ID</th>
-                  <th>Customer</th>
-                  <th>Amount</th>
-                  {isAdmin && <th style={{color:'#38bdf8'}}>Billed By</th>}
-                </tr>
+                <tr><th>Invoice ID</th><th>Customer</th><th>Amount</th>{isAdmin && <th style={{color:'#38bdf8'}}>Billed By</th>}</tr>
               </thead>
               <tbody>
                 {(isAdmin ? recentTx : sellerTx).map((tx, i) => (
                   <tr key={i}>
                     <td style={{ color: '#38bdf8' }}>{tx.id}</td>
-                    <td>{tx.customer}</td>
+                    <td>{tx.customer}<br/><small style={{color:'#888'}}>{tx.date}</small></td>
                     <td style={{ fontWeight: 'bold' }}>₹ {Number(tx.amount).toLocaleString('en-IN')}</td>
                     {isAdmin && <td style={{textTransform:'capitalize', color:'#22c55e'}}>{tx.seller}</td>}
                   </tr>

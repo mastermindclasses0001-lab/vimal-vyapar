@@ -2,46 +2,101 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Vimal Vyapar PRO</title>
     <style>
-      body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background-color: #000000; color: #ffffff; }
-      * { box-sizing: border-box; }
-      a { text-decoration: none; color: #38bdf8; }
-      .btn-primary { background: #eab308; color: #000; padding: 10px 20px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px; }
-      .btn-primary:hover { background: #ca8a04; }
-      .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
-      .btn-danger { background: #ef4444; color: #fff; padding: 8px 16px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;}
-      .btn-success { background: #22c55e; color: #fff; padding: 10px 20px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;}
-      .btn-success:hover { background: #16a34a; }
-      .btn-success:disabled { opacity: 0.6; cursor: not-allowed; }
-      .btn-outline { background: transparent; color: #38bdf8; border: 1px solid #38bdf8; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;}
-      input, select { width: 100%; padding: 12px; margin-bottom: 16px; border: 1px solid #333; border-radius: 6px; background: #111; color: #fff; font-size: 16px; }
-      input:focus, select:focus { outline: 2px solid #38bdf8; }
-      .card { background: #111; padding: 24px; border-radius: 12px; border: 1px solid #333; box-shadow: 0 4px 20px rgba(0,0,0,0.5); margin-bottom: 20px; }
-      .table-container { overflow-x: auto; background: #111; border-radius: 12px; border: 1px solid #333; padding: 16px; margin-bottom: 20px;}
-      table { width: 100%; border-collapse: collapse; }
-      th, td { padding: 16px; text-align: left; border-bottom: 1px solid #222; }
-      th { color: #eab308; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 1px; }
-      .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; }
-      .grid-2 { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
-      .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px; }
-      .tab-btn { background: #222; color: #888; padding: 12px 24px; border: none; cursor: pointer; font-weight: bold; border-radius: 6px 6px 0 0; }
-      .tab-btn.active { background: #eab308; color: #000; }
+      :root {
+        --bg-color: #000000;
+        --card-bg: #111111;
+        --border-color: #333333;
+        --text-primary: #ffffff;
+        --text-secondary: #888888;
+        --primary: #eab308;
+        --secondary: #38bdf8;
+        --success: #22c55e;
+        --danger: #ef4444;
+      }
       
+      body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background-color: var(--bg-color); color: var(--text-primary); -webkit-tap-highlight-color: transparent; }
+      * { box-sizing: border-box; }
+      a { text-decoration: none; color: var(--secondary); }
+      
+      /* Buttons */
+      .btn { display: inline-flex; align-items: center; gap: 8px; justify-content: center; padding: 12px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 14px; }
+      .btn-primary { background: var(--primary); color: #000; }
+      .btn-primary:active { background: #ca8a04; transform: scale(0.98); }
+      .btn-danger { background: var(--danger); color: #fff; }
+      .btn-success { background: var(--success); color: #fff; }
+      .btn-outline { background: transparent; color: var(--secondary); border: 1px solid var(--secondary); }
+      .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+      
+      /* Inputs */
+      input, select { width: 100%; padding: 14px; margin-bottom: 16px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--card-bg); color: #fff; font-size: 16px; }
+      input:focus, select:focus { outline: 2px solid var(--secondary); }
+      
+      /* Layouts */
+      .card { background: var(--card-bg); padding: 24px; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 4px 20px rgba(0,0,0,0.5); margin-bottom: 20px; }
+      .table-container { overflow-x: auto; background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); padding: 16px; margin-bottom: 20px; -webkit-overflow-scrolling: touch; }
+      table { width: 100%; border-collapse: collapse; min-width: 600px; }
+      th, td { padding: 16px; text-align: left; border-bottom: 1px solid #222; }
+      th { color: var(--primary); font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 1px; white-space: nowrap; }
+      
+      .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; display: inline-flex; align-items: center; gap: 4px; }
+      
+      /* Desktop Grids */
+      .main-container { padding: 40px; max-width: 1400px; margin: 0 auto; }
+      .responsive-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
+      .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+      .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px; }
+      .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+      
+      .header-flex { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 20px; margin-bottom: 30px; }
+      .header-actions { display: flex; gap: 10px; }
+      
+      .tab-btn { background: #222; color: #888; padding: 14px 24px; border: none; cursor: pointer; font-weight: bold; border-radius: 8px 8px 0 0; white-space: nowrap; }
+      .tab-btn.active { background: var(--primary); color: #000; }
+      .tabs-container { display: flex; border-bottom: 2px solid #333; margin-bottom: 20px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .tabs-container::-webkit-scrollbar { display: none; }
+
+      /* Mobile App Adjustments */
+      @media (max-width: 768px) {
+        .main-container { padding: 16px !important; }
+        .responsive-grid { grid-template-columns: 1fr !important; gap: 16px; }
+        .grid-2 { grid-template-columns: 1fr !important; gap: 16px; }
+        .grid-4 { grid-template-columns: 1fr 1fr !important; gap: 12px; }
+        .form-grid { grid-template-columns: 1fr !important; }
+        
+        .card { padding: 16px; }
+        .header-flex { flex-direction: column; align-items: flex-start; gap: 15px; }
+        .header-actions { width: 100%; justify-content: space-between; }
+        .header-actions .btn { flex: 1; }
+        
+        /* Navbar Mobile */
+        .nav-container { flex-direction: column; gap: 12px; padding: 16px !important; }
+        .nav-header { width: 100%; display: flex; justify-content: space-between; align-items: center; }
+        .nav-links { width: 100%; overflow-x: auto; justify-content: flex-start; padding-bottom: 8px; -webkit-overflow-scrolling: touch; }
+        .nav-links::-webkit-scrollbar { display: none; }
+        .nav-links a { padding: 12px 16px !important; white-space: nowrap; border-bottom-width: 2px !important; }
+        .nav-user { width: 100%; justify-content: space-between; border-top: 1px solid #333; padding-top: 12px; }
+        
+        /* Mobile Typography */
+        h1 { font-size: 22px !important; }
+        h2 { font-size: 18px !important; }
+        .card h3 { font-size: 12px !important; }
+        .card p { font-size: 24px !important; }
+        
+        /* Modal Adjustments */
+        .modal-card { width: 95% !important; margin: 10px; max-height: 90vh; overflow-y: auto; }
+      }
+      
+      @media (max-width: 480px) {
+        .grid-4 { grid-template-columns: 1fr !important; }
+      }
+
       @media print {
         body { background-color: #ffffff !important; color: #000000 !important; margin: 0; padding: 0; }
         .no-print { display: none !important; }
-        .print-section { 
-          display: block !important; 
-          position: absolute; 
-          left: 0; 
-          top: 0; 
-          width: 100%; 
-          background: #ffffff !important; 
-          color: #000000 !important; 
-          padding: 20px;
-        }
+        .print-section { display: block !important; position: absolute; left: 0; top: 0; width: 100%; background: #ffffff !important; color: #000000 !important; padding: 20px; }
       }
     </style>
   </head>

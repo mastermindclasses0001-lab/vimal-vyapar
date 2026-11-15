@@ -113,7 +113,7 @@ export default function Billing() {
 
   return (
     <>
-      <div className="no-print" style={{ padding: '40px', maxWidth: '1400px', margin: '0 auto', display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
+      <div className="no-print main-container responsive-grid">
         <div>
           <h1 style={{ color: '#fff', margin: '0 0 24px 0', display: 'flex', alignItems: 'center', gap: '12px' }}>
             <Receipt color="#eab308" size={32} /> Point of Sale
@@ -147,7 +147,7 @@ export default function Billing() {
                       <td style={{ padding: '12px' }}><input type="number" value={item.qty} onChange={(e) => updateQty(item.id, e.target.value)} style={{ width: '60px', margin: 0, padding: '8px' }} /></td>
                       <td style={{ padding: '12px' }}><input type="number" value={item.discount || ''} onChange={(e) => updateDiscount(item.id, e.target.value)} style={{ width: '80px', margin: 0, padding: '8px' }} /></td>
                       <td style={{ padding: '12px', fontWeight: 'bold' }}>₹{Math.max(0, (item.mrp * item.qty) - (item.discount || 0)).toLocaleString()}</td>
-                      <td style={{ padding: '12px' }}><button onClick={() => removeFromCart(item.id)} className="btn-danger" style={{padding:'8px'}}><Trash2 size={16}/></button></td>
+                      <td style={{ padding: '12px' }}><button onClick={() => removeFromCart(item.id)} className="btn btn-danger" style={{padding:'8px'}}><Trash2 size={16}/></button></td>
                     </tr>
                   ))}
                 </tbody>
@@ -179,7 +179,7 @@ export default function Billing() {
               <span style={{ fontSize: '28px', fontWeight: 'bold', color: '#22c55e' }}>₹ {grandTotal.toLocaleString('en-IN')}</span>
             </div>
           </div>
-          <button onClick={handleGenerateInvoice} disabled={loading} className="btn-success" style={{ width: '100%', padding: '16px', fontSize: '18px', justifyContent: 'center' }}>
+          <button onClick={handleGenerateInvoice} disabled={loading} className="btn btn-success" style={{ width: '100%', padding: '16px', fontSize: '18px', justifyContent: 'center' }}>
             <Printer size={20} /> Generate Invoice
           </button>
         </div>
@@ -188,8 +188,8 @@ export default function Billing() {
       {lastInvoice && (
         <div className="print-section" style={{ zIndex: 1000 }}>
           <div className="no-print" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginBottom: '20px', padding: '20px', background: '#111' }}>
-            <button onClick={executePrint} className="btn-success"><Printer size={16} /> Print Document</button>
-            <button onClick={() => setLastInvoice(null)} className="btn-danger"><X size={16} /> Close Preview</button>
+            <button onClick={executePrint} className="btn btn-success"><Printer size={16} /> Print Document</button>
+            <button onClick={() => setLastInvoice(null)} className="btn btn-danger"><X size={16} /> Close Preview</button>
           </div>
 
           <div id="printable-invoice" style={{ maxWidth: '800px', margin: '0 auto', background: '#fff', color: '#000', padding: '40px', border: '1px solid #ddd' }}>
